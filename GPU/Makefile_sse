@@ -1,0 +1,37 @@
+#suggested by Keigo Nitadori 11/06/08.
+#FFLAGS = -O3 -Wall -msse2 -mfpmath=sse
+FFLAGS = -O3 -Wall -ffast-math
+#FFLAGS += -pg
+#FFLAGS = -fbounds-check -C
+#FFLAGS = -O2 -pg
+FC = gfortran 
+CXX = g++ -O3 -Wall #-pg
+
+OBJECTS = $(SOURCE:.f=.o)
+all: intgrt.o gpucor.o gpunb.o nbintp.o cnbint.o nbint.o adjust.o energy2.o phicor.o cmfirr.o cmfreg.o cmfreg2.o iregint2.o kspert.o swap.o start.o fpoly2a.o scale.o wtime.o
+	mv -f *.o ../Ncode
+	make -C ../Ncode -j4 -f Makefile_gpu
+	mv -f ../Ncode/nbody6 ~/Runs/Nbody6/GPU_test/nbody6.sse
+
+sse: intgrt.o gpucor.o nbintp.o cnbint.o nbint.o adjust.o energy2.o phicor.o cmfirr.o cmfreg.o cmfreg2.o regint2.o kspert.o swap.o start.o fpoly2a.o scale.o wtime.o
+	$(CXX) -c ./lib/gpunb.sse.cpp -o gpunb.o -fopenmp
+	$(CXX) -c ./lib/gpupot.sse.cpp -o gpupot.o -fopenmp
+	cp -f *.o ../Ncode
+	make sse -C ../Ncode -f Makefile_gpu -j4
+	mv -f ../Ncode/nbody6 $(RUNDIR)/nbody6.sse
+	cp -f $(RUNDIR)/nbody6.sse ./run
+
+cnbint.o: ./lib/cnbint.cpp
+	$(CXX) -c ./lib/cnbint.cpp
+
+wtime.o: ./lib/wtime.cpp
+	$(CXX) -c ./lib/wtime.cpp
+
+intgrt.o: intgrt.omp.f
+	$(FC) $(FFLAGS) intgrt.omp.f -c -o intgrt.o -fopenmp
+
+start.o: start.omp.F
+	$(FC) $(FFLAGS) start.omp.F -c -o start.o -fopenmp
+
+clean:
+	rm -f *.o

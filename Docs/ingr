@@ -1,0 +1,16 @@
+1 10000.0
+1000 1 10 1500 95 1
+0.02 0.03 0.5 2.0 10.0 1000.0 2.0E-04 6.0D-08 1.44
+1 1 0 0 1 0 0 0 0 0
+0 0 0 0 1 1 0 0 3 0
+1 0 2 0 1 2 3 1 0 2
+0 0 0 0 0 0 1 0 0 0
+1.0E-04 0.001 0.2 1.0 1.0E-06 0.001
+1.0 10.0 1.0 0 0 0.02 0.0 0.0
+0.5 0.0 0.0 0.0
+1.0 0 0 0.0 0.0
+
+Input file for GR capture and gravitational radiation.
+This is achieved by #27 = 3 and #28 > 0, together with
+a suitably small value of RBAR in order to have
+sufficiently large velocities.

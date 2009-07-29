@@ -1,0 +1,3 @@
+Please ignore a few routines of the type *.f.* and also
+some extra Makefiles used for another purpose.
+Option #11 is reserved for NBODY7.

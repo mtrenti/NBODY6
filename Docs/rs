@@ -1,0 +1,17 @@
+3 1000.0
+0.0 0.0 0.0 0.0 2000.0 0.0 1 1
+
+Restart file for changing TCRIT to 2000 and option \#1 to 1.
+==================
+
+4 1000.0
+0.0 0.02 0.0 0.0 0.0
+
+Restart file for changing ETAR to 0.02.
+===================
+
+5 1000.0
+0.0 0.0 0.0 0.0 0.0 3.0D-05 0 0
+0.01 0.0 0.0 0.0 0.0
+
+Restart file for changing QE to 3.0D-05 and ETAI to 0.01.

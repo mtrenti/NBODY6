@@ -1,0 +1,515 @@
+// Disassembling __globfunc__Z10h4_gravityiP9IparticleP9JparticlePA16_5Force (0)
+.entry __globfunc__Z10h4_gravityiP9IparticleP9JparticlePA16_5Force
+{
+.lmem 0
+.smem 2096
+.reg 32
+.bar 1
+cvt.u32.u16 $r3, s[0x000e]
+mov.b32 $r2, s[0x0010]
+add.b32 $r5, $r3, 0x00000001
+mul24.half.lo.u32.u16.u16 $r1, $r3.lo, $r2.hi
+mul24.half.lo.u32.u16.u16 $r4, $r2.hi, $r5.lo
+mad24.lo.u32.u16.u16.u32 $r1, $r3.hi, $r2.lo, $r1
+mad24.lo.u32.u16.u16.u32 $r6, $r2.lo, $r5.hi, $r4
+shl.u32 $r4, $r1, 0x00000010
+shl.u32 $r6, $r6, 0x00000010
+mov.s16 $r1.lo, s[0x000c]
+mad24.lo.u32.u16.u16.u32 $r4, $r3.lo, $r2.lo, $r4
+cvt.u32.u16 $r0, $r0.lo
+mad24.lo.u32.u16.u16.u32 $r6, $r2.lo, $r5.lo, $r6
+shr.s32 $r2, $r4, 0x0000001f
+op.61 // (unk0 00800404)// (unk1 00400000)
+shr.s32 $r7, $r6, 0x0000001f
+and.b32 $r5, $r2, c1[0x0004]
+shl.u32 $r2, $r1, 0x00000004
+and.b32 $r7, $r7, c1[0x0004]
+add.half.b32 $r4, $r5, $r4
+add.half.b32 $r2, $r3, $r2
+add.u32 $r5, $r7, $r6
+mov.b32 $r10, $r124// (unk1 02000000)
+mov.b32 $r11, $r124
+shl.u32 $r1, $r1, 0x00000005
+mov.b32 $r12, $r124// (unk1 02000000)
+mov.b32 $r13, $r124
+mov.b32 $r14, $r124// (unk1 02000000)
+add.u32 $r3, s[0x0018], $r1
+mov.u32 $r17, g[$r3]
+mov.b32 $r15, $r124
+mov.b32 $r8, $r124// (unk1 02000000)
+shl.u32 $r1, $r2, 0x00000006
+add.b32 $r2, $r3, 0x00000004
+mov.u32 $r18, g[$r2]
+add.b32 $r2, $r3, 0x00000008
+mov.u32 $r19, g[$r2]
+add.b32 $r2, $r3, 0x0000000c
+mov.u32 $r20, g[$r2]
+add.b32 $r2, $r3, 0x00000010
+mov.u32 $r21, g[$r2]
+add.b32 $r2, $r3, 0x00000014
+mov.u32 $r22, g[$r2]
+shr.s32 $r9, $r4, 0x00000004
+shr.s32 $r24, $r5, 0x00000004
+add.b32 $r2, $r3, 0x00000018
+mov.u32 $r23, g[$r2]
+add.u32 $r16, s[0x0028], $r1
+set.le.s32 $p0|$o127, $r24, $r9
+@$p0.ne bra.label label16
+shl.u32 $r25, $r0, 0x00000004
+shl.u32 $r26, $r9, 0x00000005
+label0: bar.sync.u32 0x00000000
+add.half.b32 $r0, s[0x0020], $r26
+add.half.b32 $r0, $r25, $r0
+mov.b128 $r4, g[$r0]
+movsh.b32 $ofs1, $r25, 0x00000000
+add.b32 $r27, $r0, 0x00000400
+mov.b128 $r0, g[$r27]
+mov.b32 s[$ofs1+0x0030], $r4
+mov.b32 s[$ofs1+0x0034], $r5
+mov.b32 s[$ofs1+0x0038], $r6
+mov.b32 s[$ofs1+0x003c], $r7
+mov.b32 s[$ofs1+0x0430], $r0
+mov.b32 s[$ofs1+0x0434], $r1
+mov.b32 s[$ofs1+0x0438], $r2
+mov.b32 s[$ofs1+0x043c], $r3
+bar.sync.u32 0x00000000
+sub.u32 $r3, $r24, $r9
+set.gt.s32 $p0|$o127, $r3, c1[0x0008]
+@$p0.ne bra.label label9
+shr.s32 $r0, $r3, 0x0000001f
+and.b32 $r0, $r0, c1[0x000c]
+add.u32 $r0, $r0, $r3
+and.b32 $r4, $r0, c1[0x0010]
+set.le.s32 $p0|$o127, $r4, $r60// (unk0 00400000)
+mov.b32 $r1, $r124
+@$p0.ne bra.label label6
+mov.b32 $r0, 0x00000030
+movsh.b32 $ofs1, $r0, 0x00000000
+label1: add.half.rn.f32 $r7, s[$ofs1+0x0004], -$r18 // dy = yj - yi
+add.half.rn.f32 $r27, s[$ofs1+0x0000], -$r17        // dx = xj - xi
+mul.half.rn.f32 $r0, $r7, $r7                       // r2 = dy * dy
+add.half.rn.f32 $r6, s[$ofs1+0x0008], -$r19         // dz = zj - zi
+mad.rn.f32 $r0, $r27, $r27, $r0                     // r2 += dx * dx
+mad.rn.f32 $r0, $r6, $r6, $r0                       // r2 += dz * dz
+join.label label2
+mov.half.b32 $r5, s[$ofs1+0x000c]                   // mj
+mov.half.b32 $r28, s[$ofs1+0x0010]                  // vxj
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20             // flag = (r2 < h2i)
+mov.half.b32 $r29, s[$ofs1+0x0014]                  // vyj
+mov.half.b32 $r2, s[$ofs1+0x0018]                   // vzj
+rsqrt.f32 $r0, $r0                                  // rinv1 = rsqrtf(r2)
+@$p0.eq bra.label label2                            // if(flag) {
+add.u32 $r0, $r9, $r1                               // j
+and.b32 $r30, $r8, c1[0x0004]                       // addr = nnb & (NBMAX - 1)
+shl.u32 $r30, $r30, 0x00000001                      // addr *= sizeof(short)
+add.u32 $r30, $r16, $r30                            // addr += base
+add.b32 $r30, $r30, 0x00000020                      // ???
+mov.u16 g[$r30], $r0                                // list[addr] = j
+mov.b32 $r0, $r124// (unk1 02000000)                // rinv1 = 0
+add.b32 $r8, $r8, 0x00000001                        // nnb++
+label2: add.join.rn.f32 $r29, $r29, -$r22           // } dvy = vyj - vyi
+add.half.rn.f32 $r28, $r28, -$r21                   // dvx = vxj - vxi
+mul.half.rn.f32 $r30, $r7, $r29                     // rv = dy * dvy
+mul.half.rn.f32 $r5, $r0, $r5                       // mrinv1 = rinv * mj
+mul.half.rn.f32 $r0, $r0, $r0                       // rinv2 = rinv * rinv
+add.rn.f32 $r2, $r2, -$r23                          // dvz = vzj - vzi
+mad.rn.f32 $r30, $r27, $r28, $r30                   // rv += dx * dvx
+mul.rn.f32 $r5, $r0, $r5                            // mrinv3 = rinv2 * mrinv1
+mul.rn.f32 $r0, $r0, 0xc0400000a                    // rinv2 *= 3.0f
+mad.rn.f32 $r30, $r6, $r2, $r30                     // rv += dz * dvz
+mul.rn.f32 $r0, $r0, $r30                           // rv *= rinv2
+mad.rn.f32 $r10, $r27, $r5, $r10                    // ax += mrinv3 * dx
+mad.rn.f32 $r27, $r27, $r0, $r28                    // tx = dx * rv + dvx
+mad.rn.f32 $r13, $r5, $r27, $r13                    // jx += mrinv3 * tx
+mad.rn.f32 $r11, $r5, $r7, $r11                     // ay += mrinv3 * dy
+mad.rn.f32 $r27, $r7, $r0, $r29                     // ty = dy * rv + dvy
+add.rn.f32 $r7, s[$ofs1+0x0024], -$r18
+mad.rn.f32 $r12, $r5, $r6, $r12                     // az += mrinv3 * dz
+mad.rn.f32 $r0, $r6, $r0, $r2                       // tz = dz * rv + dvz
+add.half.rn.f32 $r6, s[$ofs1+0x0020], -$r17
+mul.half.rn.f32 $r2, $r7, $r7
+mad.rn.f32 $r14, $r5, $r27, $r14                    // jz += mrinv3 * tz
+add.rn.f32 $r27, s[$ofs1+0x0028], -$r19
+mad.rn.f32 $r2, $r6, $r6, $r2
+mad.rn.f32 $r15, $r5, $r0, $r15
+mad.rn.f32 $r0, $r27, $r27, $r2
+join.label label3
+mov.half.b32 $r5, s[$ofs1+0x002c]
+mov.half.b32 $r28, s[$ofs1+0x0030]
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20
+mov.half.b32 $r29, s[$ofs1+0x0034]
+mov.half.b32 $r2, s[$ofs1+0x0038]
+rsqrt.f32 $r0, $r0
+@$p0.eq bra.label label3
+add.u32 $r0, $r9, $r1
+add.b32 $r0, $r0, 0x00000001
+and.b32 $r30, $r8, c1[0x0004]
+shl.u32 $r30, $r30, 0x00000001
+add.u32 $r30, $r16, $r30
+add.b32 $r30, $r30, 0x00000020
+mov.u16 g[$r30], $r0
+mov.b32 $r0, $r124
+add.b32 $r8, $r8, 0x00000001
+label3: add.join.rn.f32 $r29, $r29, -$r22
+add.half.rn.f32 $r28, $r28, -$r21
+mul.half.rn.f32 $r30, $r7, $r29
+mul.half.rn.f32 $r5, $r0, $r5
+mul.half.rn.f32 $r0, $r0, $r0
+add.rn.f32 $r2, $r2, -$r23
+mad.rn.f32 $r30, $r6, $r28, $r30
+mul.rn.f32 $r5, $r0, $r5
+mul.rn.f32 $r0, $r0, 0xc0400000
+mad.rn.f32 $r30, $r27, $r2, $r30
+mul.rn.f32 $r0, $r0, $r30
+mad.rn.f32 $r10, $r6, $r5, $r10
+mad.rn.f32 $r6, $r6, $r0, $r28
+mad.rn.f32 $r6, $r5, $r6, $r13
+mad.rn.f32 $r11, $r5, $r7, $r11
+mad.rn.f32 $r28, $r7, $r0, $r29
+add.rn.f32 $r7, s[$ofs1+0x0044], -$r18
+mad.rn.f32 $r12, $r5, $r27, $r12
+mad.rn.f32 $r0, $r27, $r0, $r2
+add.rn.f32 $r13, s[$ofs1+0x0040], -$r17
+mul.rn.f32 $r2, $r7, $r7
+mad.rn.f32 $r14, $r5, $r28, $r14
+add.rn.f32 $r27, s[$ofs1+0x0048], -$r19
+mad.rn.f32 $r2, $r13, $r13, $r2
+mad.rn.f32 $r15, $r5, $r0, $r15
+mad.rn.f32 $r0, $r27, $r27, $r2
+join.label label4
+mov.b32 $r5, s[$ofs1+0x004c]
+mov.b32 $r28, s[$ofs1+0x0050]
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20
+mov.b32 $r29, s[$ofs1+0x0054]
+mov.b32 $r2, s[$ofs1+0x0058]
+rsqrt.f32 $r0, $r0
+@$p0.eq bra.label label4
+add.u32 $r0, $r9, $r1
+add.b32 $r0, $r0, 0x00000002
+and.b32 $r30, $r8, c1[0x0004]
+shl.u32 $r30, $r30, 0x00000001
+add.u32 $r30, $r16, $r30
+add.b32 $r30, $r30, 0x00000020
+mov.u16 g[$r30], $r0
+mov.b32 $r0, $r124// (unk1 02000000)
+add.b32 $r8, $r8, 0x00000001
+label4: add.join.rn.f32 $r29, $r29, -$r22
+add.half.rn.f32 $r28, $r28, -$r21
+mul.half.rn.f32 $r30, $r7, $r29
+mul.half.rn.f32 $r5, $r0, $r5
+mul.half.rn.f32 $r0, $r0, $r0
+add.rn.f32 $r2, $r2, -$r23
+mad.rn.f32 $r31, $r13, $r28, $r30
+mul.rn.f32 $r30, $r0, $r5
+mul.rn.f32 $r0, $r0, 0xc0400000
+mad.rn.f32 $r5, $r27, $r2, $r31
+mul.rn.f32 $r0, $r0, $r5
+mad.rn.f32 $r5, $r13, $r30, $r10
+mad.rn.f32 $r10, $r13, $r0, $r28
+mad.rn.f32 $r13, $r30, $r10, $r6
+mad.rn.f32 $r6, $r30, $r7, $r11
+mad.rn.f32 $r10, $r7, $r0, $r29
+add.rn.f32 $r7, s[$ofs1+0x0064], -$r18
+mad.rn.f32 $r11, $r30, $r27, $r12
+mad.rn.f32 $r0, $r27, $r0, $r2
+add.rn.f32 $r12, s[$ofs1+0x0060], -$r17
+mul.rn.f32 $r2, $r7, $r7
+mad.rn.f32 $r14, $r30, $r10, $r14
+add.rn.f32 $r27, s[$ofs1+0x0068], -$r19
+mad.rn.f32 $r2, $r12, $r12, $r2
+mad.rn.f32 $r15, $r30, $r0, $r15
+mad.rn.f32 $r0, $r27, $r27, $r2
+join.label label5
+mov.b32 $r10, s[$ofs1+0x006c]
+mov.b32 $r29, s[$ofs1+0x0070]
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20
+mov.b32 $r28, s[$ofs1+0x0074]
+mov.b32 $r2, s[$ofs1+0x0078]
+rsqrt.f32 $r31, $r0
+@$p0.eq bra.label label5
+add.u32 $r0, $r9, $r1
+add.b32 $r0, $r0, 0x00000003
+and.b32 $r30, $r8, c1[0x0004]
+shl.u32 $r30, $r30, 0x00000001
+add.u32 $r30, $r16, $r30
+add.b32 $r30, $r30, 0x00000020
+mov.u16 g[$r30], $r0
+mov.b32 $r31, $r124
+add.b32 $r8, $r8, 0x00000001
+label5: add.join.rn.f32 $r28, $r28, -$r22
+add.half.rn.f32 $r30, $r29, -$r21
+mul.half.rn.f32 $r0, $r7, $r28
+mul.half.rn.f32 $r29, $r31, $r10
+mul.half.rn.f32 $r10, $r31, $r31
+add.rn.f32 $r2, $r2, -$r23
+mad.rn.f32 $r31, $r12, $r30, $r0
+mul.rn.f32 $r0, $r10, $r29
+mul.rn.f32 $r10, $r10, 0xc0400000
+mad.rn.f32 $r29, $r27, $r2, $r31
+mul.rn.f32 $r29, $r10, $r29
+mad.rn.f32 $r10, $r12, $r0, $r5
+mad.rn.f32 $r5, $r12, $r29, $r30
+mad.rn.f32 $r13, $r0, $r5, $r13
+add.b32 $r1, $r1, 0x00000004
+mad.rn.f32 $r12, $r0, $r27, $r11
+mad.rn.f32 $r5, $r7, $r29, $r28
+mad.rn.f32 $r2, $r27, $r29, $r2
+mad.rn.f32 $r11, $r0, $r7, $r6
+set.gt.s32 $p0|$o127, $r4, $r1
+mad.rn.f32 $r14, $r0, $r5, $r14
+mad.rn.f32 $r15, $r0, $r2, $r15
+add.b32 $ofs1, $ofs1, 0x00000080
+@$p0.ne bra.label label1
+label6: set.le.s32 $p0|$o127, $r3, $r1
+@$p0.ne bra.label label15
+shl.u32 $r0, $r1, 0x00000005
+add.b32 $r0, $r0, 0x00000030
+movsh.b32 $ofs1, $r0, 0x00000000
+label7: add.half.rn.f32 $r27, s[$ofs1+0x0004], -$r18
+add.half.rn.f32 $r28, s[$ofs1+0x0000], -$r17
+mul.half.rn.f32 $r0, $r27, $r27
+add.half.rn.f32 $r7, s[$ofs1+0x0008], -$r19
+mad.rn.f32 $r0, $r28, $r28, $r0
+mad.rn.f32 $r0, $r7, $r7, $r0
+join.label label8
+mov.half.b32 $r4, s[$ofs1+0x000c]
+mov.half.b32 $r5, s[$ofs1+0x0010]
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20
+mov.half.b32 $r6, s[$ofs1+0x0014]
+mov.half.b32 $r2, s[$ofs1+0x0018]
+rsqrt.f32 $r0, $r0
+@$p0.eq bra.label label8
+add.u32 $r0, $r9, $r1
+and.b32 $r29, $r8, c1[0x0004]
+shl.u32 $r29, $r29, 0x00000001
+add.u32 $r29, $r16, $r29
+add.b32 $r29, $r29, 0x00000020
+mov.u16 g[$r29], $r0
+mov.b32 $r0, $r124// (unk1 02000000)
+add.b32 $r8, $r8, 0x00000001
+label8: add.join.rn.f32 $r6, $r6, -$r22
+add.half.rn.f32 $r5, $r5, -$r21
+mul.half.rn.f32 $r29, $r27, $r6
+mul.half.rn.f32 $r30, $r0, $r4
+mul.half.rn.f32 $r4, $r0, $r0
+add.rn.f32 $r0, $r2, -$r23
+mad.rn.f32 $r29, $r28, $r5, $r29
+mul.rn.f32 $r2, $r4, $r30
+mul.rn.f32 $r4, $r4, 0xc0400000
+mad.rn.f32 $r29, $r7, $r0, $r29
+mul.rn.f32 $r4, $r4, $r29
+mad.rn.f32 $r10, $r28, $r2, $r10
+mad.rn.f32 $r5, $r28, $r4, $r5
+mad.rn.f32 $r11, $r2, $r27, $r11
+mad.rn.f32 $r6, $r27, $r4, $r6
+add.b32 $r1, $r1, 0x00000001
+mad.rn.f32 $r12, $r2, $r7, $r12
+mad.rn.f32 $r0, $r7, $r4, $r0
+mad.rn.f32 $r13, $r2, $r5, $r13
+set.ne.s32 $p0|$o127, $r3, $r1
+mad.rn.f32 $r14, $r2, $r6, $r14
+mad.rn.f32 $r15, $r2, $r0, $r15
+add.b32 $ofs1, $ofs1, 0x00000020
+@$p0.ne bra.label label7
+bra.label label15
+label9: mov.b32 $r0, 0x00000030
+movsh.b32 $ofs1, $r0, 0x00000000
+mov.b32 $r1, $r124
+label10: add.half.rn.f32 $r27, s[$ofs1+0x0004], -$r18
+add.half.rn.f32 $r7, s[$ofs1+0x0000], -$r17
+mul.half.rn.f32 $r0, $r27, $r27
+add.half.rn.f32 $r28, s[$ofs1+0x0008], -$r19
+mad.rn.f32 $r0, $r7, $r7, $r0
+mad.rn.f32 $r0, $r28, $r28, $r0
+join.label label11
+mov.half.b32 $r2, s[$ofs1+0x000c]
+mov.half.b32 $r4, s[$ofs1+0x0010]
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20
+mov.half.b32 $r5, s[$ofs1+0x0014]
+mov.half.b32 $r3, s[$ofs1+0x0018]
+rsqrt.f32 $r0, $r0
+@$p0.eq bra.label label11
+add.u32 $r0, $r9, $r1
+and.b32 $r6, $r8, c1[0x0004]
+shl.u32 $r6, $r6, 0x00000001
+add.u32 $r6, $r16, $r6
+add.b32 $r6, $r6, 0x00000020
+mov.u16 g[$r6], $r0
+mov.b32 $r0, $r124// (unk1 02000000)
+add.b32 $r8, $r8, 0x00000001
+label11: add.join.rn.f32 $r5, $r5, -$r22
+add.half.rn.f32 $r29, $r4, -$r21
+mul.half.rn.f32 $r6, $r27, $r5
+mul.half.rn.f32 $r4, $r0, $r2
+mul.half.rn.f32 $r2, $r0, $r0
+add.rn.f32 $r3, $r3, -$r23
+mad.rn.f32 $r6, $r7, $r29, $r6
+mul.rn.f32 $r0, $r2, $r4
+mul.rn.f32 $r2, $r2, 0xc0400000
+mad.rn.f32 $r4, $r28, $r3, $r6
+mul.rn.f32 $r4, $r2, $r4
+mad.rn.f32 $r6, $r7, $r0, $r10
+mad.rn.f32 $r2, $r7, $r4, $r29
+add.rn.f32 $r7, s[$ofs1+0x0024], -$r18
+mad.rn.f32 $r10, $r0, $r28, $r12
+mad.rn.f32 $r5, $r27, $r4, $r5
+mad.rn.f32 $r3, $r28, $r4, $r3
+add.half.rn.f32 $r12, s[$ofs1+0x0020], -$r17
+mul.half.rn.f32 $r4, $r7, $r7
+mad.rn.f32 $r11, $r0, $r27, $r11
+add.rn.f32 $r27, s[$ofs1+0x0028], -$r19
+mad.rn.f32 $r4, $r12, $r12, $r4
+mad.rn.f32 $r13, $r0, $r2, $r13
+mad.rn.f32 $r14, $r0, $r5, $r14
+mad.rn.f32 $r15, $r0, $r3, $r15
+mad.rn.f32 $r0, $r27, $r27, $r4
+join.label label12
+mov.half.b32 $r2, s[$ofs1+0x002c]
+mov.half.b32 $r4, s[$ofs1+0x0030]
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20
+mov.half.b32 $r5, s[$ofs1+0x0034]
+mov.half.b32 $r3, s[$ofs1+0x0038]
+rsqrt.f32 $r0, $r0
+@$p0.eq bra.label label12
+add.u32 $r0, $r9, $r1
+add.b32 $r0, $r0, 0x00000001
+and.b32 $r28, $r8, c1[0x0004]
+shl.u32 $r28, $r28, 0x00000001
+add.u32 $r28, $r16, $r28
+add.b32 $r28, $r28, 0x00000020
+mov.u16 g[$r28], $r0
+mov.b32 $r0, $r124
+add.b32 $r8, $r8, 0x00000001
+label12: add.join.rn.f32 $r5, $r5, -$r22
+add.half.rn.f32 $r28, $r4, -$r21
+mul.half.rn.f32 $r29, $r7, $r5
+mul.half.rn.f32 $r4, $r0, $r2
+mul.half.rn.f32 $r2, $r0, $r0
+add.rn.f32 $r3, $r3, -$r23
+mad.rn.f32 $r29, $r12, $r28, $r29
+mul.rn.f32 $r0, $r2, $r4
+mul.rn.f32 $r2, $r2, 0xc0400000
+mad.rn.f32 $r4, $r27, $r3, $r29
+mul.rn.f32 $r4, $r2, $r4
+mad.rn.f32 $r6, $r12, $r0, $r6
+mad.rn.f32 $r2, $r12, $r4, $r28
+add.rn.f32 $r12, s[$ofs1+0x0044], -$r18
+mad.rn.f32 $r10, $r0, $r27, $r10
+mad.rn.f32 $r5, $r7, $r4, $r5
+mad.rn.f32 $r3, $r27, $r4, $r3
+add.rn.f32 $r27, s[$ofs1+0x0040], -$r17
+mul.rn.f32 $r4, $r12, $r12
+mad.rn.f32 $r7, $r0, $r7, $r11
+add.rn.f32 $r11, s[$ofs1+0x0048], -$r19
+mad.rn.f32 $r4, $r27, $r27, $r4
+mad.rn.f32 $r13, $r0, $r2, $r13
+mad.rn.f32 $r14, $r0, $r5, $r14
+mad.rn.f32 $r15, $r0, $r3, $r15
+mad.rn.f32 $r0, $r11, $r11, $r4
+join.label label13
+mov.b32 $r2, s[$ofs1+0x004c]
+mov.b32 $r4, s[$ofs1+0x0050]
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20
+mov.b32 $r5, s[$ofs1+0x0054]
+mov.b32 $r3, s[$ofs1+0x0058]
+rsqrt.f32 $r0, $r0
+@$p0.eq bra.label label13
+add.u32 $r0, $r9, $r1
+add.b32 $r0, $r0, 0x00000002
+and.b32 $r28, $r8, c1[0x0004]
+shl.u32 $r28, $r28, 0x00000001
+add.u32 $r28, $r16, $r28
+add.b32 $r28, $r28, 0x00000020
+mov.u16 g[$r28], $r0
+mov.b32 $r0, $r124// (unk1 02000000)
+add.b32 $r8, $r8, 0x00000001
+label13: add.join.rn.f32 $r5, $r5, -$r22
+add.half.rn.f32 $r29, $r4, -$r21
+mul.half.rn.f32 $r28, $r12, $r5
+mul.half.rn.f32 $r4, $r0, $r2
+mul.half.rn.f32 $r2, $r0, $r0
+add.rn.f32 $r3, $r3, -$r23
+mad.rn.f32 $r28, $r27, $r29, $r28
+mul.rn.f32 $r0, $r2, $r4
+mul.rn.f32 $r2, $r2, 0xc0400000
+mad.rn.f32 $r4, $r11, $r3, $r28
+mul.rn.f32 $r4, $r2, $r4
+mad.rn.f32 $r28, $r27, $r0, $r6
+mad.rn.f32 $r2, $r27, $r4, $r29
+add.rn.f32 $r6, s[$ofs1+0x0064], -$r18
+mad.rn.f32 $r27, $r0, $r11, $r10
+mad.rn.f32 $r5, $r12, $r4, $r5
+mad.rn.f32 $r3, $r11, $r4, $r3
+add.rn.f32 $r11, s[$ofs1+0x0060], -$r17
+mul.rn.f32 $r4, $r6, $r6
+mad.rn.f32 $r12, $r0, $r12, $r7
+add.rn.f32 $r7, s[$ofs1+0x0068], -$r19
+mad.rn.f32 $r4, $r11, $r11, $r4
+mad.rn.f32 $r13, $r0, $r2, $r13
+mad.rn.f32 $r14, $r0, $r5, $r14
+mad.rn.f32 $r15, $r0, $r3, $r15
+mad.rn.f32 $r0, $r7, $r7, $r4
+join.label label14
+mov.b32 $r2, s[$ofs1+0x006c]
+mov.b32 $r4, s[$ofs1+0x0070]
+set.lt.u16.f32.f32 $p0|$o127, $r0, $r20
+mov.b32 $r5, s[$ofs1+0x0074]
+mov.b32 $r3, s[$ofs1+0x0078]
+rsqrt.f32 $r0, $r0
+@$p0.eq bra.label label14
+add.u32 $r0, $r9, $r1
+add.b32 $r0, $r0, 0x00000003
+and.b32 $r10, $r8, c1[0x0004]
+shl.u32 $r10, $r10, 0x00000001
+add.u32 $r10, $r16, $r10
+add.b32 $r10, $r10, 0x00000020
+mov.u16 g[$r10], $r0
+mov.b32 $r0, $r124
+add.b32 $r8, $r8, 0x00000001
+label14: add.join.rn.f32 $r5, $r5, -$r22
+add.half.rn.f32 $r4, $r4, -$r21
+mul.half.rn.f32 $r30, $r6, $r5
+mul.half.rn.f32 $r29, $r0, $r2
+mul.half.rn.f32 $r10, $r0, $r0
+add.rn.f32 $r2, $r3, -$r23
+mad.rn.f32 $r30, $r11, $r4, $r30
+mul.rn.f32 $r0, $r10, $r29
+mul.rn.f32 $r3, $r10, 0xc0400000
+mad.rn.f32 $r10, $r7, $r2, $r30
+mul.rn.f32 $r3, $r3, $r10
+mad.rn.f32 $r10, $r11, $r0, $r28
+mad.rn.f32 $r4, $r11, $r3, $r4
+mad.rn.f32 $r11, $r0, $r6, $r12
+mad.rn.f32 $r5, $r6, $r3, $r5
+add.b32 $r1, $r1, 0x00000004
+mad.rn.f32 $r12, $r0, $r7, $r27
+mad.rn.f32 $r2, $r7, $r3, $r2
+mad.rn.f32 $r13, $r0, $r4, $r13
+set.ne.s32 $p0|$o127, $r1, c1[0x0000]
+mad.rn.f32 $r14, $r0, $r5, $r14
+mad.rn.f32 $r15, $r0, $r2, $r15
+add.b32 $ofs1, $ofs1, 0x00000080
+@$p0.ne bra.label label10
+label15: add.b32 $r9, $r9, 0x00000040
+set.gt.s32 $p0|$o127, $r24, $r9
+add.b32 $r26, $r26, 0x00000800
+@$p0.ne bra.label label0
+label16: mov.u32 g[$r16], $r10
+add.b32 $r0, $r16, 0x00000004
+mov.u32 g[$r0], $r11
+add.b32 $r0, $r16, 0x00000008
+mov.u32 g[$r0], $r12
+add.b32 $r0, $r16, 0x00000010
+mov.u32 g[$r0], $r13
+add.b32 $r0, $r16, 0x00000014
+mov.u32 g[$r0], $r14
+add.b32 $r0, $r16, 0x00000018
+mov.u32 g[$r0], $r15
+add.b32 $r0, $r16, 0x0000001c
+mov.end.u32 g[$r0], $r8
+#.constseg 1:0x0000 const
+#{
+#d.32 0x00000040, 0x0000000f, 0x0000003f, 0x00000003 // 0000
+#d.32 0xfffffffc // 0010
+#}
+}

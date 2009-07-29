@@ -1,0 +1,1 @@
+../Ncode/common6.h

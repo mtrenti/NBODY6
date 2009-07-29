@@ -1,0 +1,36 @@
+This directory contains several useful files for running NBODY6:
+
+nbody6.tex is a TeX file which lists all the routines in dir Ncode.
+
+chain.tex is a TeX file which lists routines in dirs Chain & Nchain.
+
+input is a simple test input file.
+
+nbody2.ps is a ps file of the New Astronomy paper (2001) which explains
+all details of the code NBODY2.
+It should be useful for providing relevant information about NBODY6
+since no equivalent manual exists.
+
+COMMON2 lists all common variables in NBODY2, many of which are used
+by NBODY6.
+
+NBODY5 shows the structure of code NBODY5 which is similar to NBODY6.
+
+write5.tex is an old TeX file explaining details of NBODY5.
+
+refs gives some of the main references to relevant papers.
+
+poster.tex is a LayTeX file from Rome Chaos meeting announcing NBODY6.
+
+man6.pdf is a pdf file for the NBODY6 User Manual.
+
+To compile, type 'make nbody6' in dir Ncode (first check f77 or f95).
+
+To run, type 'time nbody6 <input >out &'.
+
+Please report any compiler error or warning messages.
+
+Input: file `input' is for standard case and `inlog' for general case.
+File 'inbins' is a template for primordial binaries.
+
+The file opt6.pdf contains information about some option changes.

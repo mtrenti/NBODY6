@@ -1,0 +1,1432 @@
+\magnification=1200
+\font\big=cmr10 scaled \magstep2
+\vglue 1.5cm
+\hsize=6truein
+\vsize=8.5truein
+\centerline {\big NBODY5}
+\bigskip
+\bigskip
+\centerline {REGULARIZED AHMAD--COHEN N-BODY CODE}
+\medskip
+\centerline {WITH TRIPLE AND BINARY COLLISIONS}
+\bigskip
+\centerline {Sverre J. Aarseth, Institute of Astronomy, Cambridge}
+\bigskip
+\bigskip
+\centerline {INTRODUCTION}
+\bigskip
+
+         The basic methods of solution are described in three papers:
+\parindent 40pt
+\bigskip
+
+             Ahmad, A. and Cohen, L. 1973, {\it J. Comp. Phys.} 12, 389.
+
+             Aarseth, S. J. 1971, {\it Astrophys. and Space Sci.} 14, 118.
+
+             Aarseth, S. J. 1985, in {\it Multiple Time Scales}, p. 377.
+\bigskip
+\parindent 12pt
+
+       The first paper describes the direct integration method for the N-body
+    problem.  It is based on the idea of separating the total force on a
+    particle into two parts due to neighbours and distant particles.  Each part
+    is represented by a fourth-order force polynomial with its own
+    time-step.  The irregular
+       neighbour force is evaluated at frequent intervals and the
+    regular distant force contribution is then added by prediction unless the
+    next time for total force calculation has been reached.  In the latter case
+    the neighbour list is updated and consistent corrections are applied to the
+    irregular and regular force differences (where appropriate).  This procedure
+ is more efficient than the standard polynomial method for particle
+    numbers exceeding about 50.
+
+   The second paper describes the Kustaanheimo-Stiefel (KS) two-body
+    regularization method which is used for treating an arbitrary number of
+    close hyperbolic encounters and persistent binaries.  The Ahmad--Cohen
+ difference scheme has replaced the original fourth-order fitting polynomial
+ using Newtonian extrapolation.  Only
+ neighbours giving significant perturbations are included in the
+    perturbing field.  Conversely, an equivalent c.m. approximation is used when
+ calculating the force due to distant regularized components.  A
+ complete solution of the two-body
+    motion also requires integration of the corresponding centre of mass.  The
+    initialization and solution method is the same as for the single particles,
+    except that the irregular force is obtained as the mass-weighted sum over
+ both components.  A procedure for unperturbed two-body motion is now included
+ and Baumgarte stabilization has been implemented for energetic binaries.
+
+    The 1971 paper contains procedures for automatic decision-making
+    which enable the two types of solutions to be optimally employed.  The
+        switch from direct to regularized solutions is determined by a
+  time-step criterion, whereas regularizations are controlled by the relative
+   two-body perturbation.  The 1971 paper also explains the organization of
+    COMMON variables.  However, the original initialization procedure 
+    for regularized solutions has now been superseded by an explicit method.
+
+   The last paper describes minor improvements of the Ahmad--Cohen scheme.  It
+ also contains new algorithms for implementing the KS regularization in
+ the Ahmad--Cohen scheme.  All regularization procedures are discussed in
+ some detail and several modifications have been added.
+This paper also describes special sub-programs for three-body and
+four-body regularization as well as temporary merging of stable
+hierarchical triples (stable quadruples were added later).
+
+  The subsequent sections contain a general description of the present version,
+ which is designed for realistic simulations of open star clusters.  Current
+ features include the galactic tidal field, supernova mass loss and interstellar
+ clouds.  These are optional and the program is also suitable for isolated
+ systems.
+\bigskip
+\bigskip
+\centerline{                            GENERAL INFORMATION}
+\bigskip
+
+   The program is written in FORTRAN IV and has been developed on the IBM
+ 370/165 {\it\&} VAX 11/780.  Although programming efficiency has been a
+ primary concern, direct N-body calculations are time-consuming.  It is
+ therefore desirable to use a high-level compiler.
+
+        The program uses full double precision arithmetic,
+    appropriate to machines with less than ten figure accuracy.  With 
+ mixed single and double precision it
+ is possible to study a 1000-body system with up to 39 neighbours and 10
+    simultaneous regularizations on a 500 K byte machine using phase overlay and
+    optimizing compiler (program NBODY4).  Program NBODY5 needs an 
+    extra 179 K bytes.
+
+   Access to the tape/disc routine MYDUMP is by CALL MYDUMP(I,J).  If I = 0 all
+ COMMON blocks are read from logical unit J, and I $>$ 0 is used for saving
+ COMMON.  The restart procedure requires that all important variables are stored
+ in COMMON.  Several labelled COMMON blocks are used for organizational
+ convenience and the whole standard COMMON is added to most routines
+ by the INCLUDE 'COMMON5.FOR' statement which is slightly non-standard.
+ The standard COMMON block is supplied as a separate file.
+ Logical unit 5 is used for input and unit 6 for output,
+              whereas units 1, 2 {\it\&} 3 denote tape/disc.   
+
+   A considerable effort has gone into the development of strategies which
+ optimize the running time without unduly sacrificing accuracy.  Apart from
+ computer word limitations, increased accuracy can be achieved by changing the
+ input parameters (described below).  The main exceptions are that routines
+ START and FPOLY neglect the relatively time-consuming second and third force
+ derivatives for the most distant particles, and that large third-order derivative
+ corrections are sometimes omitted in routine INTGRT to avoid spurious reduction
+ of regular steps.
+
+   The distinction between neighbours and distant particles is central to the
+ present method.  New neighbours are determined at appropriate intervals and
+ the correction procedures for neighbour changes are consistent up to the
+ highest order in the force polynomials.  For every particle I, an array
+ LIST(J,I) holds the locations of neighbours sequentially in J = 2,3,...,NNB+1,
+ where NNB = LIST(1,I) is the current neighbour number.  A consistent updating
+ of the relevant neighbour lists is carried out at the beginning and end of
+ each regularization.  This procedure permits a simple organization of the
+ COMMON variables (see the 1985 paper for details).
+\bigskip
+\bigskip
+\centerline {ROUTINES}
+\medskip
+\hrule
+\medskip
+\settabs\+\indent&NSTEPNX\quad&\cr
+\+&MAIN&      Main calling sequence and reading of restart data. \cr
+\+&MYDUMP&    Reads or writes all COMMON blocks (option 1 {\it\&} 2). \cr
+\+&START&     Input and polynomial initialization. \cr
+\+&DATA&      Generation of initial conditions. \cr
+\+&CLOUD&     Initialization of interstellar clouds (option 13). \cr
+\+&MAINPT&    Output and error control. \cr
+\+&CORE&      Core radius {\it\&} density centre (added October 1987). \cr
+\+&INTGRT&    N-body integrator for direct and regularized solutions. \cr
+\+&TRANSF&    Initialization of regularized pair. \cr
+\+&FINISH&    Termination of regularized pair. \cr
+\+&RESOLV&    Transformation of regularized variables to physical variables. \cr
+\+&FPOLY&     Polynomial initialization for components of old pair or new c.m. \cr
+\+&ESCAPE&    Removal of escaping particles. \cr
+\+&MLOSS&     Mass loss from evolving stars (option 19). \cr
+\+&TRIPLE&    Sub-program for three-body regularization (option 5). \cr
+\+&TETRAD&    Sub-program for four-body regularization (option 5). \cr
+\+&MERGE&     Sub-program for hierarchical triples {\it\&} quadruples (option 5). \cr
+\medskip
+\hrule
+\bigskip
+\bigskip
+\centerline {COMMON VARIABLES}
+\medskip
+\hrule
+\medskip
+\settabs\+\indent&NSTEPNX\quad&\cr
+ \+&A&     General purpose working space. \cr
+\+&ADP&     Working space for regularized solutions. \cr
+\+&A1&      Generalized Levi-Civita matrix. \cr
+\+&BE&      Total energy.  BE(1)=initial, BE(2)=previous, BE(3)=current. \cr
+\+&BETA&    Maximum regularized time-step (superseded June 1988). \cr
+\+&BODY&    Mass of an individual particle. \cr
+\+&BODYCL&  Current mass of interstellar clouds (initialized to zero). \cr
+\+&CLDOT&   Inverse time-scale for cloud mass growth or decay. \cr
+\+&CLM&     Effective mass of clouds. \cr
+\+&CLMDOT&  Time derivative of cloud masses (used near the boundary). \cr
+\+&CMR&     Density centre and scalar value (based on maximum density). \cr
+\+&CMRDOT&  Centre of mass velocity components and scalar value. \cr
+\+&CMSEP2&  Distance ratio for c.m. approximation (square is stored). \cr
+\+&CPU&     Maximum computing time in minutes (used with the timer). \cr
+\+&DELTAN&  Regularized time-step parameter (6.28$\ast$DELTAN steps/orbit). \cr
+\+&DELTAT&  Constant time interval for output. \cr
+\+&DFMAX&   Maximum perturbation for soft regularized binaries if R $>$ R0. \cr
+\+&DFMIN&   Relative two-body perturbation for unperturbed motion. \cr
+\+&DTAU&    Regularized time-step. \cr
+\+&DTLIST&  Interval for updating the time-step list. \cr
+\+&DTMIN&   Close encounter time-step for regularization search. \cr
+\+&D1&      First divided difference of the irregular force. \cr
+\+&D1HDOT&  First divided difference of HDOT. \cr
+\+&D1R&     First divided difference of the regular force. \cr
+\+&D1U&     First divided difference of the regularized force. \cr
+\+&D2&      Second divided difference of the irregular force. \cr
+\+&D2HDOT&  Second divided difference of HDOT. \cr
+\+&D2R&     Second divided difference of the regular force. \cr
+\+&D2U&     Second divided difference of the regularized force. \cr
+\+&D3&      Third divided difference of the irregular force. \cr
+\+&D3HDOT&  Third divided difference of HDOT. \cr
+\+&D3R&     Third divided difference of the regular force. \cr
+\+&D3U&     Third divided difference of the regularized force. \cr
+\+&ECLOSE&  Binding energy per unit mass for hard binary (positive). \cr
+\+&ETAI&    Time-step parameter for irregular force polynomial. \cr
+\+&ETAR&    Time-step parameter for the regular force polynomial. \cr
+\+&F&       One-half the total force at last step. \cr
+\+&FDOT&    One-sixth the total force derivative at last step. \cr
+\+&FI&      Irregular force due to the neighbours. \cr
+\+&FR&      Regular force due to the distant particles. \cr
+\+&FU&      One-half the regularized force. \cr
+\+&FUDOT&   One-sixth the regularized force derivative. \cr
+\+&F1&      Total force on the current particle. \cr
+\+&F1DOT&   First force derivative of the current particle. \cr
+\+&F2DOT&   Second force derivative of the current particle. \cr
+\+&F3DOT&   Third force derivative of the current particle. \cr
+\+&F4DOT&   Fourth force derivative of the current particle. \cr
+\+&GAMMA&   Relative two-body perturbation of a regularized pair. \cr
+\+&H&       Binding energy per unit mass of a regularized pair. \cr
+\+&HDOT&    First regularized derivative of H. \cr
+\+&ICOMP&   Global index of the first regularized component. \cr
+\+&ILIST&   Current list of neighbours. \cr
+\+&IPHASE&  Control variable for the calling sequence (permits overlay). \cr
+\+&JCOMP&   Global index of the second regularized component. \cr
+\+&JLIST&   Current list of receding neighbours in shell within 1.26$\ast$RS. \cr
+\+&KZ&      Options for alternative paths at run time (see table). \cr
+\+&LIST&    Neighbour list for perturbed motion (LIST(1,I) = membership). \cr
+\+&LISTR&   List of components for recently disrupted pairs. \cr
+\+&LISTV&   List of high-velocity particles (neighbour detection). \cr
+\+&N&       Current particle number (maximum is 1000). \cr
+\+&NAME&    Initial particle name (set $<$ 0 for merged ghosts). \cr
+\+&NCL&     Number of clouds (maximum is 5). \cr
+\+&NCRIT&   Final particle number (termination criterion). \cr
+\+&NDUMP&   Control variable for automatic restart procedure (option 2). \cr
+\+&NEWCL&   Number of clouds initialized on the boundary. \cr
+\+&NFIX&    Output frequency of binaries or data save (options 3, 6, 18). \cr
+\+&NLIST&   Time-step list for determining next body to be integrated. \cr
+\+&NNBMAX&  Maximum number of neighbours (two extra for c.m. splitting). \cr
+\+&NPAIRS&  Current number of regularized pairs (maximum is 10). \cr
+\+&NPRINT&  Output counter (reset to zero when NPRINT = NFIX). \cr
+\+&NSTEPN&  Counters for diagnostic output information (see table). \cr
+\+&NSTEPS&  Time-step counter for safety dumps (reset each 100000 steps). \cr
+\+&NTIMER&  Step counter for calling clock (reset every 1000 steps). \cr
+\+&NTOT&    Total number of direct solutions (NTOT = N + NPAIRS). \cr
+\+&NZERO&   Initial particle number. \cr
+\+&ONE2&    The constant 0.5. \cr
+\+&ONE3&    The constant 1.0/3.0. \cr
+\+&ONE4&    The constant 0.25. \cr
+\+&ONE5&    The constant 0.2. \cr
+\+&ONE6&    The constant 1.0/6.0. \cr
+\+&ONE12&   The constant 1.0/12.0. \cr
+\+&PCL2&    Minimum cloud impact parameter squared (reset every output). \cr
+\+&P1&      Momentum of relative two-body motion. \cr
+\+&QE&      Relative energy tolerance for error control. \cr
+\+&Q1&      Coordinates of relative two-body motion. \cr
+\+&R&       Current two-body separation of a regularized pair. \cr
+\+&RB2&     Radius of cloud boundary (square is stored). \cr
+\+&RCL2&    Half-mass radius of clouds (square is stored). \cr
+\+&RMIN&    Distance parameter for regularization search {\it\&} termination. \cr
+\+&RSCALE&  Half-mass radius (obtained from effective potential energy). \cr
+\+&RTIDE&   Tidal radius (2$\ast$RTIDE used for escaper removal). \cr
+\+&RS&      Radius of the standard neighbour sphere. \cr
+\+&R0&      Initial two-body separation of a regularized pair. \cr
+\+&SIGMA&   Gaussian velocity dispersion of clouds. \cr
+\+&SMIN&    Close encounter time-step for neighbour retention. \cr
+\+&STEP&    Time-step for the irregular force polynomial. \cr
+\+&STEPCL&  Time-step for integration of clouds. \cr
+\+&STEPR&   Time-step for regular force polynomial. \cr
+\+&TAU&     Regularized time. \cr
+\+&TCL&     Time of the last cloud integration (option 13). \cr
+\+&TCR&     Standard crossing time (obtained from total mass {\it\&} energy). \cr
+\+&TCRIT&   Termination time in scaled units. \cr
+\+&TDOT2&   Second regularized derivative of the time. \cr
+\+&TDOT3&   Third regularized derivative of the time. \cr
+\+&TIDAL&   Tidal parameters (X, Z, {\it\&} Coriolis terms; also RBAR in pc). \cr
+\+&TIME&    Physical integration time in scaled units. \cr
+\+&TLIST&   Time for next updating of the time-step list. \cr
+\+&TNEXT&   Time for next output. \cr
+\+&T0&      Time of the last irregular force calculation. \cr
+\+&T0R&     Time of last regular force calculation. \cr
+\+&T0U&     Time of the last regularized force (regularized units). \cr
+\+&T1&      Time of the first backwards irregular force calculation. \cr
+\+&T1R&     Time of first backwards regular force calculation. \cr
+\+&T1U&     Time of the first backwards regularized force calculation. \cr
+\+&T2&      Time of the second backwards irregular force calculation. \cr
+\+&T2R&     Time of second backwards regular force calculation. \cr
+\+&T2U&     Time of the second backwards regularized force calculation. \cr
+\+&T3&      Time of the third backwards irregular force calculation. \cr
+\+&T3R&     Time of third backwards regular force calculation. \cr
+\+&T3U&     Time of the third backwards regularized force calculation. \cr
+\+&U&       Current regularized coordinates of a pair. \cr
+\+&UDOT&    Regularized velocities at the beginning of a step. \cr
+\+&U0&      Regularized coordinates at the beginning of a step. \cr
+\+&V&       Regularized momentum. \cr
+\+&VCL&     Initial mean velocity of clouds (constant if SIGMA = 0). \cr
+\+&X&       Cartesian coordinates at current time. \cr
+\+&XCL&     Cartesian coordinates of clouds at current time. \cr
+\+&XDOT&    Velocities at beginning of step {\it\&} current values at output. \cr
+\+&XDOTCL&  Velocities of clouds. \cr
+\+&X0&      Coordinates at the beginning of a step. \cr
+\+&X0DOT&   Velocities at the beginning of a step. \cr
+\+&ZMASS&   Current total mass. \cr
+\+&ZMBAR&   Mean stellar mass in solar masses. \cr
+\medskip
+\hrule
+\bigskip
+\vfill\eject
+\centerline {INPUT PARAMETERS}
+\medskip
+\hrule
+\medskip
+\settabs\+\indent&NSTEPNX\quad&\cr
+ \+&KSTART*&  Values 1,2,3 indicate new case, restart, or modified restart. \cr
+ \+&TCOMP&   Maximum computing time in minutes. \cr
+ \+&N*&       Total particle number. \cr
+ \+&NFIX&    Output frequency of binaries or data save (options 3, 6, 18). \cr
+ \+&NCRIT&   Final particle number (alternative termination criterion). \cr
+ \+&NRAND&   Random number sequence skip. \cr
+ \+&NNBMAX&  Maximum number of neighbours (allow two extra locations). \cr
+ \+&ETAI*&    Time-step parameter for irregular force polynomial. \cr
+ \+&ETAR&    Time-step parameter for regular force polynomial. \cr
+ \+&RS0&     Initial radius of neighbour sphere. \cr
+ \+&DELTAT&  Output time interval in units of the crossing time. \cr
+ \+&TCRIT&   Termination time in units of the crossing time. \cr
+ \+&QE&      Energy tolerance (restart if DE/KE $>$ $5\ast$ QE {\it\&} KZ(2) $>$ 0). \cr
+ \+&SMIN&    Close encounter time-step for neighbour retention. \cr
+ \+&RBAR&    Mean cluster radius in pc (use RBAR = 0 for isolated cluster). \cr
+ \+&ZMBAR&   Mean mass in solar units (use ZMBAR $>$0 for isolated cluster). \cr
+ \+&KZ(J)*&   Non-zero options for alternative paths (see separate table). \cr
+ \+&DTMIN*&   Time-step parameter for regularization search. \cr
+ \+&RMIN&    Distance parameter for regularization search. \cr
+ \+&BETA&    Maximum regularized time-step (superseded June 1988). \cr
+ \+&DELTAN&  Regularized time-step parameter (6.28$\ast$DELTAN steps/orbit). \cr
+ \+&CMSEP2&  Distance ratio for c.m. approximation (square is stored). \cr
+ \+&ECLOSE&  Binding energy per unit mass for hard binary (positive). \cr
+ \+&DFMIN&   Relative two-body perturbation for unperturbed motion. \cr
+ \+&DFMAX&   Maximum perturbation for standard regularization termination. \cr
+ \+&ALPHA*&   Power law index for initial mass function (routine DATA). \cr
+ \+&BODY1&   Maximum particle mass before scaling. \cr
+ \+&BODYN&   Minimum particle mass before scaling. \cr
+ \+&Q&       Virial theorem scaling factor (Q = 0.5 for equilibrium). \cr
+ \+&NCL*&     Number of interstellar clouds (routine DATA with option 13). \cr
+ \+&RB2&     Radius of cloud boundary in pc (square is stored). \cr
+ \+&VCL&     Initial mean cloud velocity in km/sec. \cr
+ \+&SIGMA&   Gaussian velocity dispersion of clouds in km/sec. \cr
+ \+&CLM&     Individual cloud masses in solar masses (maximum 5 clouds). \cr
+ \+&RCL2&    Half-mass radii of clouds in pc (square is stored). \cr
+\medskip
+\hrule
+\medskip
+\+& &    *) New input line (free format).  \cr
+\bigskip
+\vfill\eject
+\centerline {OPTIONS KZ(J)}
+\medskip
+\hrule
+\medskip
+\settabs\+\indent&XXX\quad&\cr
+\+&~~1&  COMMON save on unit 1 if TCOMP $>$ CPU or if TIME $>$ TCRIT. \cr
+\+&~~2&  COMMON save on unit 2 for restart if DE/KE $>$ 5$\ast$QE. \cr
+\+&~~3&  Output of significant non-regularized binaries (frequency NFIX). \cr
+\+&~~4&  Skips full predictor loop if neighbour number $>$ KZ(4) {\it\&} KZ(4) $>$ 0. \cr
+\+&~~5&  Triple {\it\&} tetrad regularization or mergers (full output if $>$ 1). \cr
+\+&~~6&  Essential data written to unit 3 at output time (frequency NFIX). \cr
+\+&~~7&  All bodies printed at output time. \cr
+\+&~~8&  Diagnostic output for c.m. particles at regular steps. \cr
+\+&~~9&  First five bodies printed at output time. \cr
+\+&10&  Diagnostic output at beginning of regularization (routine TRANSF). \cr
+\+&11&  Diagnostic output at end of regularization (routine FINISH). \cr
+\+&12&  Diagnostic output at each regularized step (routine INTGRT). \cr
+\+&13&  Interstellar clouds (output if $>$ 1.  Gaussian if $<$ 0 or $>$ 2). \cr
+\+&14&  Stabilization of regularized motion for hard binary (H $<$ --ECLOSE). \cr
+\+&15&  Neighbour list modifications printed in routine TRANSF. \cr
+\+&16&  Neighbour list modifications printed in routine FINISH. \cr
+\+&17&  Modification of ETAI {\it\&} ETAR by QE if $>$ 0 and RMIN {\it\&} DTMIN if $>$ 1. \cr
+\+&18&  Output of regularized binaries (frequency NFIX). \cr
+\+&19&  Mass loss (option = 2 after mass loss to skip next energy check). \cr
+\+&20&  Solid-body rotation (if = 1) or Plummer model with f(m) (if = 2). \cr
+\medskip
+\hrule
+\bigskip
+\bigskip
+\centerline {OUTPUT COUNTERS NSTEPN(J)}
+\medskip
+\hrule
+\medskip
+\+&~~1&  Irregular integration steps. \cr
+\+&~~2&  Regular integration steps. \cr
+\+&~~3&  Retained neighbours using time-step criterion SMIN. \cr
+\+&~~4&  Force polynomial corrections. \cr
+\+&~~5&  Too many neighbours with standard criterion. \cr
+\+&~~6&  No neighbours inside 1.26 times the basic radius. \cr
+\+&~~7&  Regularization attempts. \cr
+\+&~~8&  Total regularizations. \cr
+\+&~~9&  Hyperbolic regularizations. \cr
+\+&10&  Too many neighbours when replacing c.m. by individual components. \cr
+\+&11&  Regularized integration steps. \cr
+\+&12&  Coordinate predictions of all particles (see option 4). \cr
+\+&13&  Unperturbed binary orbits. \cr
+\+&14&  Large F3DOT corrections not included. \cr
+\+&15&  Second component of old regularized pair included as neighbour. \cr
+\+&16&  C.m. values for polynomial corrections of regularized component. \cr
+\+&17&  Second component of recently disrupted pair included as neighbour. \cr
+\+&18&  No neighbours with standard criterion. \cr
+\+&19&  Maximum permitted regularized pairs (NPAIRS = 10). \cr
+\+&20&  Small step neighbour selected from other neighbour lists. \cr
+\+&21&  Search for triple {\it\&} four-body regularization or mergers. \cr
+\+&22&  Fast particle included in LISTV. \cr
+\+&24&  Mergers of stable triples or quadruples. \cr
+\medskip
+\hrule
+\bigskip
+\bigskip
+\centerline {THE INTEGRATOR}
+\bigskip
+
+   The integrator package consists of the routines START, INTGRT, TRANSF,
+  FINISH, RESOLV and FPOLY.  It is suitable for studying a variety of dynamical
+ problems and only routines START and INTGRT may require modification.  The
+ choice of the basic
+ integration parameters and initial conditions for routine START are discussed
+ in subsequent sections.
+
+   Program control for output and termination is at the end of each
+ time-step loop in routine INTGRT.  The output intervals are determined by the
+ time condition TIME $>$ TNEXT.  Control is returned to the integration routine
+ unless the end of the calculation has been reached.
+
+ VAX system routines are used for timing a run.  After initialization by
+ CALL LIB\$INIT in routine MAIN, the elapsed time is obtained by CALL LIB\$STAT
+ near label 430 of routine INTGRT.  The timer is
+ called when the COMMON variable NTIMER reaches a fixed number of steps
+ (here 1000), after which it is set to zero again.  If the elapsed time exceeds
+ the value of CPU, specified at run time and option 1 is non-zero, all COMMON
+ blocks are saved on logical unit 1 before stopping.  A bit extra time should be
+ allowed for output occurring near the end of a run.  The calculation can be
+ continued by reading one data card specifying  KSTART = 2 and TCOMP = computing
+ time (in minutes).  If KSTART = 3 routine MAIN reads new values for some
+ parameters and one option can also be changed.  In either case, all COMMON
+ blocks are read and control is returned to routine INTGRT again.
+
+   Some saving of core storage may be achieved by overlaying different parts of
+ the program.  The routines can be arranged into segments as follows:
+ (1) MAIN, MYDUMP, RESOLV, CLOUD; (2) START, DATA; (3) MAINPT, ESCAPE; (4)
+ INTGRT; (5) TRANSF, FPOLY; (6) FINISH, FPOLY1, MLOSS.  Routine FPOLY1 is
+ identical to FPOLY and should be called from
+ FINISH by its new name if this procedure is adopted.  Segment 1 is the root
+ phase; the others are formed by the linkage editor using appropriate control
+ cards.  Alternatively routines INTGRT, TRANSF, FINISH, FPOLY {\it\&} MLOSS may form
+ one overlay segment.  Routine MAIN controls
+ the calling sequence to the different phases by the COMMON variable
+ IPHASE set in INTGRT.  This works equally well if overlay is not used.
+
+ The size of the COMMON blocks depends on the parameters N,
+ NPAIRS {\it\&} NNBMAX.  With
+          the full double precision version, the total COMMON storage
+ requirement is 434$\ast$NMAX + 376$\ast$KMAX + 2$\ast$NMAX$\ast$LMAX + 4562
+ bytes, where NMAX, KMAX and LMAX denote the maximum value of
+ NTOT = N + NPAIRS, NPAIRS and full size of neighbour list, respectively.
+ Note that LIST(1,I) contains
+ the number of neighbours and that at least two locations should be free after
+  specifying NNBMAX.  The current version permits N = 1000, NPAIRS = 10
+  {\it\&} LMAX = 40.  It is simple
+ to change the COMMON arrays to any other values of N {\it\&} NPAIRS.  
+ The standard COMMON blocks are normally supplied as a separate
+ file and appended in most routines by the INCLUDE 'COMMON5.FOR'
+ statement. A convenient general
+ expression for the maximum size of neighbour arrays is given by 
+ LMAX = 10 + N$\ast$$\ast$0.5, using NNBMAX = LMAX -- 3 for the maximum neighbour number.
+
+ Optional stabilization of regularized motion for hard binaries (H $<$ --ECLOSE)
+  was introduced in August 1982.  This procedure prevents the accumulation of
+ systematic energy errors over many periods.  To save
+         time in routine INTGRT, some two-dimensional arrays are written
+ explicitly three times inside loops, i.e. X(1,I), X(2,I), X(3,I).  Note that
+ on a scalar machine such as VAX the array
+ X(K,I) is faster than X(I,K) which was used earlier.
+\bigskip
+\bigskip
+\centerline {MAIN}
+\bigskip
+
+ The main routine controls the calling sequence.  First it reads
+ two decision variables, i.e. KSTART {\it\&} TCOMP.  KSTART = 1,2,3 denotes new case,
+ restart from COMMON dump on tape/disc or restart with modified parameters,
+ respectively.  The local variable TCOMP specifies the maximum computing time
+ in minutes to be used for the run.  It is subsequently stored in the COMMON
+ variable CPU since otherwise an over-write would occur at
+ restart time.  Timing
+ procedures are usually installation dependent and the VAX system statements
+ CALL LIB\$INIT used for initialization and CALL LIB\$STAT giving the elapsed
+ time may therefore have to be replaced.  The latter is used near the end
+ of routines MAINPT {\it\&} INTGRT.
+
+ Once control passes to routine
+ INTGRT a return does not occur until the next output time denoted by variable
+ TNEXT, except for initialization or termination of regularizations
+ or mergers.  The
+ program terminates either in routine MAINPT or in INTGRT, depending
+ on the conditions TIME $>$ TCRIT (or N $<$ NCRIT), or TCOMP $>$ CPU.  In the latter case
+ all COMMON variables are saved if option 1 is activated and the appropriate
+ tape/disc unit has been allocated.
+
+ MAIN also makes an optional call of routine MLOSS (option 19) at every output
+ interval.  This is a routine for mass loss and may be omitted for 
+ many applications.
+
+   Program control for sub-programs TRIPLE, TETRAD and MERGE is
+ included at the end of MAIN in order to facilitate phase overlay
+ (IPHASE = 4, 5, 6 respectively, set in routine INTGRT).
+ Before starting the three-body or four-body regularization,
+ each relevant KS pair is terminated by calling routine FINISH.
+ Merged hierarchical configurations are terminated by calling
+ routine RESET (IPHASE = 7 set in INTGRT).
+\bigskip
+\bigskip
+\centerline {MYDUMP}
+\bigskip
+
+ A tape/disc routine is provided for writing or reading the COMMON
+ variables.  The general
+ call statement is CALL MYDUMP(I,J).  If I = 0 all COMMON blocks are read
+ from logical unit J, whereas I $>$ 0 is used for saving COMMON.  The restart
+ procedure requires that all important variables are stored in COMMON.  Several
+ labelled COMMON blocks are used for organizational convenience.  The size of
+ COMMON blocks must be consistent with the other routines.  Note the use of
+ full double precision; however, some   
+ integer arrays are INTEGER $\ast2$ to save memory.
+ The required size of COMMON blocks (standard words) for changing
+ arrays is as follows: 20$\ast$NMAX + 66$\ast$KMAX + 90 (/BLOCK1/);
+ 88$\ast$NMAX + 28$\ast$KMAX (/BLOCK3/);
+ (LMAX + 1)$\ast$NMAX/2 + 825 (/BLOCK4/). Here NMAX, KMAX and LMAX
+ denote the maximum value of NTOT = N + NPAIRS, NPAIRS and the
+ whole neighbour list, respectively.
+\bigskip
+\bigskip
+\centerline {MLOSS}
+\bigskip
+
+ Realistic simulations of open star clusters must include a procedure for mass
+ loss from evolving stars.  This routine is called from MAIN every output time if option 19 is
+ non-zero.  A fitting formula is used to calculate the main sequence time-scale
+ for the maximum particle mass.  A length scale of 1 pc is assumed for the
+ conversion to physical time if tidal forces are not included.  Two cases of
+ instantaneous mass loss are considered if the calculated time-scale exceeds the
+ current time.  Above 6 solar masses the remnant is assumed to be a neutron star
+ of 1.5 solar masses, otherwise a white dwarf in the range 0.38 -- 1.28 solar masses is specified.
+
+ The case of a regularized component undergoing mass loss is included, with an
+ unperturbed binary resolved at a random phase angle.  A
+ consistent correction
+ of the total energy is calculated but option 19 is also increased to 2 to skip
+ the next energy check (when it is reduced to 1 again).  If a regularized
+ component suffers mass loss the pair is terminated by calling routines FINISH
+ {\it\&} FPOLY.  Remnant neutron stars are given a high velocity to ensure 
+ rapid escape due to recoil.
+\bigskip
+\bigskip
+\centerline {MAINPT}
+\bigskip
+
+ This routine deals with output and error control.  The current
+ coordinates and velocities are first predicted to highest order.  The next loop
+ which has N$\ast$(N -- 1)/2 terms evaluates the potential energy.  The energy
+ of regularized pairs is included directly for increased accuracy, avoiding
+ singularities.  The provisional density centre (from maximum
+ neighbour density) is set in CMR(1,2,3).  An improved value is 
+ obtained in routine CORE which also gives core radius RC {\it\&} 
+ membership NC. Other quantities calculated
+ are the average neighbour number (denoted by $<$NNB$>$),
+ modified kinetic energy, centre of mass
+ coordinates, and Z-component of angular momentum.  If non-zero,
+ option 4 is updated to KZ(4) = $<$NNB$>$.  
+
+   The main output lines are mostly self-explanatory. Here CM gives
+ the current c.m. values of coordinates and velocities, DE is the
+ relative energy error (evaluated with respect to the modified
+ kinetic energy), E is total energy, TCR denotes the time in units
+ of the current crossing time, $<$R$>$ is the approximate half-mass
+ radius, CMAX is maximum density contrast, RDENS is location of
+ the density centre, AZ is Z-component of angular momentum, EB/E is
+ relative energy of regularized binaries, and T6 is time in million
+ years (nominal value for isolated system). All the counters NSTEPN
+ are also printed together with the number of regularized perturbers,
+ current values of RMIN and DTMIN as well as $<$C$>$ which represents the effective
+ neighbour number (different from $<$NNB$>$) and relative cost of
+ irregular and regular integration. Moreover, one line is printed
+ for each particle if option 7 is activated.  Alternatively the first five
+ particles are printed if option 9 is non-zero.  For each particle I is printed:
+ I, NAME, BODY, STEP, STEPR, EI, RI, LIST(1,I), XYZ-coordinates (w.r. to
+ density centre), XDOT(K,I), irregular force, regular force, {\it\&} RS.  Here EI is the
+ Jacobian energy per unit mass and RI is the central distance.  
+ Option 3 permits a binary search (frequency NFIX).
+  Each line gives: index of components,
+ mass of components, binding energy per unit mass, semi-major axis,
+ mean motion, separation, central distance, eccentricity, and 
+ neighbour number of first component.
+ Likewise, option 18 produces a similar line for any regularized 
+ binaries, with c.m. neighbour number and relative perturbation  
+ added at the end.
+
+ A facility for automatic error control is included (option 2) and works as
+ follows.  A restart from the last output time is made with reduced time-step
+ parameters if the relative energy error exceeds 5$\ast$QE, where QE is
+ specified at input.  If option 17 is also activated and the relative error is
+ in the range (QE, 5$\ast$QE) the time-step parameters are merely reduced by an
+ appropriate amount, whereas ETAI and ETAR are increased slightly if the error
+ is $<$ QE/5.  The program terminates after one unsuccessful restart
+ using the COMMON variable NDUMP.  As a safety precaution the program also
+ terminates if the error exceeds 5$\ast$QE and option 2 is zero.
+
+     Options 1 and 2 may be used independently if desired.  However the most
+ flexible procedure is to have both options non-zero.  In this case the
+ calculation can be halted at any time.  Alternatively option 2 may be used
+ for error control and termination at output time by moving the test TCOMP $>$
+ CPU from INTGRT to MAINPT.  If there are no
+ numerical problems it is sufficient to use option 1.
+
+ The velocities XDOT which are over-written must be restored before the
+ COMMON save to enable a correct restart.  
+ The data on unit 1 {\it\&} 2 is
+ temporary, being over-written each time.  It is most convenient to accumulate
+ the basic data such as TIME, BODY(I), X(K,I), XDOT(K,I) on a separate tape/disc
+ unit.  This is done just before setting XDOT(K,I) = X0DOT(K,I), using option
+ 6 (frequency NFIX).  With disc instead of tape write NTOT first 
+ as a separate record to enable reading.
+\bigskip
+\bigskip
+\centerline {CORE}
+\bigskip
+
+   The determination of core radius and density centre is based on
+the paper by Casertano and Hut ({\it Astrophys. J.} 298, 80), but
+using an rms weighting for the density radius. This procedure
+gives a well defined core radius for small samples.
+All members inside the half-mass radius are first selected.
+Individual densities are then assigned according to the sixth 
+nearest neighbour, obtained by sorting square distances.
+The density centre is now formed by a density-weighted summation
+over the selected coordinates, whereas the core radius is
+evaluated from an rms expression involving the sum of central
+distances and densities squared.
+The current density centre is set in the COMMON variable CMR(K)
+which therefore no longer coincides with the particle of largest
+neighbour density.
+
+   The following quantities are available upon return to routine
+MAINPT: core radius (RC), density-weighted average density (RHOD),
+maximum density (RHOM), and particle number inside the core radius (NC).
+Both RHOD and RHOM are scaled by the average density determined
+from the half-mass radius.
+Note that the present algorithm treats all particles equally; the
+core mass may therefore be underestimated for unequal masses.
+ However, it is not obvious how to generalize the present procedure
+ to the case of a mass spectrum.
+\bigskip
+\bigskip
+\centerline {ESCAPE}
+\bigskip
+
+ This routine is called from MAINPT.  It removes particles outside twice the
+ tidal radius, calculated with respect to the current density centre.
+ A simple escape velocity test is added for isolated
+ systems.  Corrections of the total energy maintains energy conservation.
+ To remove a particle, all
+ relevant COMMON variables are updated (including NLIST, LISTR {\it\&} LISTV).  
+ A separate procedure removes any
+ regularized pairs (i.e. first the c.m., then the components).  
+ Merged ghosts (single particle or binary c.m.) are normally  
+ retained (skip on RI2 $>$ 1.0D+10), but are removed consistently 
+ in case the associated binary is also escaping. For isolated
+ cluster calculations RTIDE = $10\ast$RSCALE (set by routine MAINPT), otherwise 
+ an appropriate value is calculated from the tidal parameters and 
+ updated according to the new total mass.
+
+ The main line of output contains: current particle number, total mass, total
+ energy, c.m. scalar value, Y-component of c.m., central distance of last
+ escaper, irregular time-step, radius of neighbour sphere, mean mass of
+ remaining particles, number of particles inside one tidal radius, and names of
+ escapers.  The escape angles with respect to the X-axis and XY-plane are also
+ printed if the tidal field is included.
+ A separate line is printed for each escaping binary, giving 
+ relevant information in obvious notation (note that a ghost
+ binary is printed with NAME = 0 and EB = 0).
+\bigskip
+\bigskip
+\centerline {START}
+\bigskip
+
+ This routine reads the basic parameters and performs the initialization for
+ the integrator.  Relevant counters and variables are first set to zero and the
+ fractional constants ONE2, etc are specified.  The reason for introducing these
+  constants is to retain flexibility in the choice of precision by means of a
+ simple declaration and also to save time on divisions (only ONE3, ONE6 {\it\&} ONE12
+ are implemented).
+
+ Six data cards are needed for a standard run.  All input is read
+ in free format as READ (5,$\ast$) for convenience but this can readily be
+ changed.  The relevant variables are
+ listed in the input table and the choice of integration parameters is
+ discussed near the end of this write-up.  Initial values for the variables
+ BODY(I), X(K,I), XDOT(K,I), where I = 1,2,...,N {\it\&} K = 1,2,3, must be specified
+ by routine DATA.  The force polynomials are obtained by the method of
+ explicit differencing which only requires the masses, coordinates and
+ velocities.  See the 1985 book article for details.
+
+ There are two main loops, both
+ requiring N$\ast$$\ast$2 operations.  The force and first derivative due to neighbours
+ and distant particles are evaluated separately in one loop.  The choice of
+ neighbour sphere radius RS for each particle depends on the density as well as
+ the maximum permitted neighbour number (NNBMAX).  If the system is not
+ homogeneous it is desirable to modify the individual neighbour
+ radius (local variable RS2) at the beginning of the loop, otherwise it will be
+ set to the input value RS0.  There is an automatic
+ reduction/increase of the neighbour sphere if the membership is not in
+ the acceptable range (1, NNBMAX -- 1).
+
+ A second main loop obtains the second and third force derivatives for the
+ irregular and regular force components.  This procedure requires the total
+ force and first derivative (F {\it\&} FDOT) which are also used by the integrator for
+ coordinate predictions.  To save time the second and third derivatives for
+ the regular component are only evaluated inside a distance 5$\ast$RS since more 
+ distant particles do not contribute significantly, i.e. F2DOT scales as
+ 1/R$\ast$$\ast$5.
+
+ Contributions from the tidal parameters are added to the forces and
+ derivatives if appropriate.  The corresponding equations of motion are
+ integrated in rotating coordinates (see {\it Bull. Astron.} 3, 47, 1967 or the
+ 1985 article).  The
+ Coriolis terms form part of the irregular
+ force field, whereas the linearized tidal forces (X {\it\&} Z) are included in the
+ regular field.  Consistent derivatives are formed by the method of explicit
+ differencing.  Note that the effect of clouds need not be included since the
+ masses are zero initially.
+
+  Individual integration steps for the irregular and regular force polynomials
+ are determined from a relative criterion of the type STEP =
+ (ETA$\ast$(F$\ast$F2DOT + FDOT$\ast$$\ast$2)/(FDOT$\ast$F3DOT + F2DOT$\ast$$\ast$2))$\ast$$\ast$0.5,
+ where the parameter ETA controls the rate of convergence.  The time-step loop
+ initializes the times used for the backwards difference scheme (four variables
+ for each type).  Particle names are initialized sequentially by
+ NAME(I) = I.  This loop also
+ sets X0(K,I) = X(K,I) and X0DOT(K,I) = XDOT(K,I).  These variables denote the
+ values at the beginning of a step and are only updated at the end of each
+ individual time-step, whereas the variables X(K,I) which represent current
+ coordinates are over-written in the predictor.  Note that the variables
+ XDOT(K,I) are also used to hold current velocities in the output routine (only
+ temporarily).  Finally one-half the total force and one-sixth the total force
+ derivative is set in F(K,I) and FDOT(K,I), respectively.  This permits a fast
+ coordinate prediction to be made.
+
+ Members of the time-step list are determined in the final loop.  The starting
+ value of DTLIST is taken as one-quarter of the average time-step, 
+ subject to a membership in the permitted range.  The array
+ NLIST contains the index of all particles to be treated during the interval
+ (0, DTLIST), with NLIST(1) holding the membership number.  If the initial
+ irregular time-steps are equal NLIST should be of size N + 1 (note the
+ explicit test at the end and also near beginning of routine INTGRT).  In any
+ case NLIST should comfortably exceed N$\ast$$\ast$0.5 to include unfavourable bunching.
+\bigskip
+\bigskip
+\centerline {DATA}
+\bigskip
+
+ This routine is called from START and specifies initial conditions for
+ BODY(I), X(K,I), XDOT(K,I), where I = 1,2,....,N {\it\&} K = 1,2,3.  The present
+ version generates a homogeneous spherical system with isotropic velocities,
+ using the VAX random number routine RAN(KKK).  Alternatively, a Plummer 
+ model is generated if option 20 is 2 (= 1 for solid-body
+ rotation).  Individual masses are selected from a power
+ law with specified mass range (ALPHA = 2.35 for Salpeter function and
+ ALPHA = 1.0 for equal masses).  The coordinates
+ and velocities are then expressed in the c.m. rest frame.  The program works
+ for any consistent set of units.  The adopted choice is total mass = N
+       and total energy = --N$\ast$$\ast$2/4, giving a 
+ mean mass and equilibrium length scale of unity, and crossing
+ time TCR = 2$\ast$(2/N)$\ast\ast$0.5.  This entails a simple
+ scaling of X {\it\&} XDOT after calculation of the total energy.
+
+ The last part sets the scaled parameters for interstellar clouds if option 13
+ is non-zero.  The required input parameters are in physical units, as defined
+ in the input table.  Initial conditions for each cloud are obtained by calling
+ routine CLOUD.
+\bigskip
+\bigskip
+\centerline {CLOUD}
+\bigskip
+
+ Each call generates new coordinates and velocities for a cloud moving inwards
+ from the boundary.  The positions are randomized on the boundary sphere and the
+ velocities are isotropic.  If option 13 is 1 or 2 the space velocities are
+ constant (VCL), otherwise a Gaussian distribution is adopted (dispersion
+ SIGMA).  The velocities are converted to rotating coordinates for non-zero
+ tidal parameters.  The cloud coordinates are expressed with respect to the
+ density centre which may be significantly displaced from the coordinate
+ centre.  The cloud mass is set to
+ zero on the boundary in order to minimize the force discontinuity and is
+ increased on a short time-scale.
+\bigskip
+\bigskip
+\centerline {INTGRT}
+\bigskip
+
+ This large routine performs the step by step integration of a point-mass
+ N-body system.  The present version permits up to 10 regularized pairs and 1000
+ single particles.  Two integration methods are
+ used, i.e. KS regularization for close two-body encounters and the
+ Ahmad--Cohen neighbour scheme for single particles and c.m. bodies.  Divided
+ differences have now replaced the polynomial differences described
+ in the 1971 paper.
+
+ The loop starts by selecting from the time-step list the next body to be
+ treated (denoted by index I throughout).  Note that the current value 
+ of the time is defined by TIME = T0(I) +
+ STEP(I).  The time-step list is updated if TIME $>$ TLIST and the corresponding
+ interval DTLIST is stabilized on a membership in the range
+ (0.5$\ast$NNBMAX, NNBMAX) which is nearly optimal on scalar machines.
+
+ The integration of interstellar clouds is included if option 13 is
+ non-zero.  This is done in rotating coordinates and tidal force terms are added
+ as appropriate.  The equations of motion include the time-averaged net
+ inward force field added as a
+ repulsive contribution.  A cloud mass is initialized to zero on the boundary by
+ routine CLOUD.  It is then increased over the next 0.05 mean cloud
+ crossing time until the full value is
+ reached.  Likewise, the mass is decreased at the same rate when crossing the
+ boundary outwards and a new cloud is generated in its place when this mass
+ reaches zero.  The cloud forces are added to the regular field at each
+ total force calculation.
+
+ The case I $<$ 2$\ast$NPAIRS + 1 denotes a regularized
+ pair.  The pair index is obtained from IPAIR = 0.501$\ast$(I + 1)
+ whereupon I is set to the corresponding c.m. value I = N +
+ IPAIR.  Coordinates for the perturbers {\it\&} c.m. are first predicted to
+ order FDOT, then to F3DOT if GAMMA $>$ 0.001.  The
+ regularized coordinates, velocities {\it\&} binding
+ energy are predicted to highest order and current physical coordinates
+ obtained by a KS transformation.  If option 14 is non-zero, stabilization of
+ regularized motion is included (H $<$ --ECLOSE {\it\&} GAMMA $<$ DFMAX).  The
+ perturbation is calculated at label 700,
+ with the components of neighbour pairs not satisfying the c.m. approximation
+ resolved at label 500.  The new acceleration and higher differences are now
+  formed,
+ after which the fourth-order semi-iteration is included as a corrector 
+ for U, UDOT {\it\&} H.    
+
+   There are two main termination criteria, i.e. GAMMA
+ $>$ 0.5 for hard binaries (if the new two-body force is dominant) and GAMMA $>$
+ DFMAX together with R $>$ R0 for soft binaries.  The distance condition R $>$ RMIN
+ is used to terminate hyperbolic motion (a spurious perturber
+ may be assigned in TRANSF).  The regularized time-step is set to
+ DTAU = 1.0/(DELTAN$\ast$SQRT(2.0$\ast$$\vert$H$\vert$)) and reduced by the
+ perturbation factor 1.0/(1.0 + 1000.0$\ast$GAMMA)$\ast$$\ast$0.33.  A maximum time-step
+ $(R_0/M)^{1/2}$/DELTAN (modified by $(R_0/R)^{1/2}$ for $R > R_0$)
+ is used for soft binaries and weak
+ hyperbolic encounters.  The variable STEP holds the physical value of
+ DTAU (used by time-step list).
+
+ If option 12 is non-zero the following diagnostic is printed at 
+ regularized steps: IPAIR, TIME, H, R, DTAU, GAMMA, STEP(2$\ast$IPAIR--1),
+  LIST(1,2$\ast$IPAIR--1).
+
+ The list of perturbing neighbours for
+ binaries is updated at successive apocentre passages.  Neighbours are
+ selected from the c.m. list if their relative perturbation $>$ DFMIN by the
+ tidal approximation.  Unperturbed two-body motion is adopted during the next
+ period if there are no such particles.  Subsequent checks are made at intervals
+ which may increase (c.f. label 60).  New polynomials are obtained when
+ necessary (label 70).  Note the convention LIST(1,2$\ast$IPAIR--1) = 0 for
+ unperturbed motion.  In the case of termination the pair index IPAIR
+ is stored in COMMON variable ICOMP to permit routine FINISH being part of a
+ phase overlay program.  Termination leads to return followed by a call to
+ FINISH (since IPHASE = 2), otherwise control passes to the end of the routine.
+
+   If option 5 is non-zero and the c.m. step is $<$ DTMIN at the
+apocentre, a search is made for suitable multiple regularizations
+or temporary mergers of hierarchical configurations. A critical 
+triple or quadruple encounter is accepted for special treatment by
+the AZ or Heggie method as an isolated system for small impact
+parameter and external perturbation. The calculations are carried
+out by sub-programs TRIPLE or TETRAD called from routine MAIN 
+(IPHASE = 4 or 5), whereupon suitable restarts are made. Likewise, stable
+hierarchies (triples or quadruples) are merged temporarily on 
+return to MAIN (IPHASE = 6).
+The latter case is distinguished by a negative c.m. name for which
+a modified termination criterion 2$\ast$SEMI -- R(IPAIR) $>$
+R0(IPAIR) is used, with R0(IPAIR) including a stability factor of 5.
+
+ The treatment of single particles (2$\ast$NPAIRS $<$ I $<$ N + 1) and
+ c.m. particles (I $>$
+ N) is nearly identical.  However, there are no regularization searches for the
+ latter and the acceleration is also obtained by a different expression.  The
+ direct integration cycle starts with coordinate predictions to order FDOT for
+ either the neighbours (order F2DOT if STEP(I) $<$ SMIN) or all particles,
+ depending on whether the regular force component can be extrapolated or needs
+ to be evaluated again.  The local variable IR is used as an indicator for the
+ relevant case (i.e. IR = 0 or IR = 1) which is determined by comparing
+ TIME + STEP(I) with T0R(I)
+ + STEPR(I).  Option 4 is used to save time by restricting the full predictor
+ loop to particles with small neighbour numbers (below $<$NNB$>$) since other
+ particles are predicted more frequently; i.e. there is a multiplicity factor of
+ NNB in the predictor.
+
+ A regularization search for the dominant neighbour (denoted by JCOMP) takes
+ place at label 100 if STEP(I) $<$ DTMIN {\it\&} I $<$ N + 1.  Only bodies with STEP(J)
+   $<$ 2$\ast$DTMIN are searched but first there is a test for possible dominant c.m.
+ particles.  If accepted for regularization both I {\it\&} JCOMP are integrated to
+ order F3DOT.  The components are stored in COMMON variables ICOMP {\it\&} JCOMP to
+ permit phase
+ overlay.  Note the convention ICOMP $<$ JCOMP assumed by routine TRANSF which is
+ called after control is returned to MAIN with IPHASE = 1.
+
+ The general case of no regularization continues by evaluating the irregular
+ force using a separate part at label 600 for c.m. particles with perturbed
+ relative motion.  Note that the components of other neighbour pairs are only
+ resolved if the c.m. approximation does not 
+ hold.  Coriolis terms are added to the irregular force if the tidal
+ parameters are non-zero.  After updating the relevant times
+ T0, T1, T2, T3, new divided differences are set for the
+ irregular force component.  The fourth difference formed from the new
+ and old third difference is used as a corrector.  At
+    this stage there are two paths depending on the control indicator.  If
+ IR = 0 the current regular force and first derivative are extrapolated from the
+ third-order polynomial and added to the irregular force and extrapolated
+ first derivative to form the total force and first derivative.  Control
+  then passes to the end of the cycle where a new irregular integration
+ step is obtained, whereupon another cycle is started.  The alternative path
+ described below requires a determination of the total force as well as a
+ new neighbour search and associated correction procedure.
+
+ The total force loop evaluates the irregular and regular components
+    separately and sets the new neighbours (NNB) in array ILIST.  If the c.m.
+ approximation does not hold, the components of pairs inside the neighbour
+ sphere (and sometimes also outside) are resolved by a KS transformation after
+ prediction of U.  Likewise, if I $>$ N the irregular force is obtained
+ by algebraic summation over the components unless the c.m.  
+ approximation applies.  Approaching
+ particles between RS and 1.26$\ast$RS are also included as neighbours if the
+ impact parameter $<$ RS.  Other particles in the outer sphere are
+ set in JLIST for selection if ILIST is empty, hence a new
+ search is only made if JLIST is empty.  
+
+  If the tidal
+ parameters are non-zero the linearized force contributions (X {\it\&} Z) are added to
+ the regular force and two-body perturbation.  The Coriolis terms are only
+ included in the irregular force (i.e. H not affected).
+
+ If NNB $>$ NNBMAX -- 1 the neighbour sphere radius is reduced and some members are
+ removed while their force contributions are updated consistently.  The
+ condition NNB $<$ NNBMAX ensures that at least one neighbour can be retained or
+ added at a later
+ stage.  Note that most neighbours are selected by a distance criterion but
+ a more general expression may be needed for very large mass ratios.
+
+  The adopted strategy for choosing the neighbour sphere radius uses
+ the square root of the number density contrast 
+ RHOS = 2$\ast$(NNB/N)$\ast$(RSCALE/RS(I))$\ast$$\ast$3.  The half-mass radius 
+ RSCALE is calculated in routine MAINPT from the effective potential
+ energy.  The present procedure aims
+ at six neighbours for a density contrast of unity and NNBMAX = 37.  For a
+ binary c.m. RS is increased to include perturbers of 
+ maximum mass.  The volume change is restricted to 25 \% either way and additionally
+ if STEPR(I) $< 0.01\ast$TCR.  The neighbour
+ sphere is increased by the smallest radial velocity factor
+ RSDOT$\ast$STEPR(I) if NNB $<$ 4 and all neighbours are moving into the outer shell.
+
+ There are several procedures for selecting additional neighbours.  The first
+ section near label 305 searches close encounter neighbours (STEP(J) $<$ SMIN)
+ for companions not already included.  The second part near label 320 looks for
+ the other component of a recently terminated pair with separation $<$
+ 2$\ast$RMIN.  The third section near label 330 searches for the other
+ component of an exchanged pair stored in LISTR.  This procedure is also
+ useful when eccentric binaries are regularized and terminated
+ frequently.  These three procedures are independent, except that 
+ a duplicated search is
+ avoided.  Any high-velocity particles (velocity $> 8\ast \ast 0.5$ times rms value) are   
+ included in array LISTV (updated consistently in TRANSF {\it\&} ESCAPE)
+ and added as neighbours if the impact parameter $<$ RS.
+
+  An efficient search procedure is used to find the loss and gain of
+ neighbours at the same time, which is faster than that employed
+ previously.  If the step is small
+ (i.e. STEP(J) $<$ SMIN) a candidate for removal may be retained to avoid large
+ derivative corrections, in which case the relevant force corrections are made.
+
+  The next part obtains new regular force differences.  The procedure is almost
+ identical to that for the irregular field.  The
+ differences are first evaluated for a constant (i.e. old) neighbour
+ field.  This is
+ achieved by subtracting the change of neighbour force due to the old
+ and new members.  The current total force
+ and first derivative are then set and the fourth-order corrector
+ is included.  Derivative corrections due to the loss and gain of
+ neighbours are now accumulated.  These terms are calculated in a
+ separate dual purpose part at the end of the routine.  Note that the
+ loss of neighbours must be known before evaluating the regular differences because
+ of the retention procedure.  If there has been a change of neighbours the
+ membership list is updated and consistent corrections performed to the force
+ polynomials.  New regular and irregular time-steps are obtained 
+ from a composite expression of the type STEP =
+ (ETA$\ast$(F$\ast$F2DOT + FDOT$\ast$$\ast$2)/(FDOT$\ast$F3DOT +
+ F2DOT$\ast$$\ast$2))$\ast$$\ast$0.5 involving all the derivatives.  
+ If desired, a new integration cycle may now be entered at label 1.
+
+  Control passes temporarily to the main routine at every output time, followed
+ by a call to MAINPT before returning.  The
+ routine ends with a timing check after a specified number (1000) of integration
+ steps (both types counted equally).  Provided that option 1 is non-zero, the
+ COMMON blocks are saved on unit 1 if the calculation does not finish in
+ the specified time (i.e. TCOMP $>$ CPU) and also every 100000 steps.  The
+ VAX timer CALL LIB\$STAT is used for this purpose.
+\bigskip
+\bigskip
+\centerline {TRANSF}
+\bigskip
+
+ This routine performs the initialization of a new regularized
+ pair.  Global variables for the two components ICOMP {\it\&}
+ JCOMP are moved up into locations
+ 2$\ast$NPAIRS + 1 {\it\&} 2$\ast$NPAIRS + 2 by exchange with the latter, 
+ whereupon the current value of NPAIRS is increased by one.  Note the convention
+ ICOMP $<$ JCOMP imposed in routine INTGRT.  Next follows updating of the
+ arrays LIST, LISTR {\it\&} LISTV to be consistent with the
+ current particle locations.  These
+ procedures are completely general and even the neighbour list 
+ modifications are fairly fast.  Note that two regularized components 
+ are replaced by the new c.m. in all neighbour lists (one component
+ only in any perturber list since no derivative corrections involved).
+
+ Initial conditions for the corresponding centre of mass are added
+ at location NTOT = N + NPAIRS, with NAME(NTOT) = NZERO + NAME(ICOMP), and the
+ regularized KS variables are introduced at location NPAIRS.  The c.m. force
+ polynomial is then obtained by calling routine FPOLY.  Note that the neighbour
+ list of ICOMP (without JCOMP) is used for the c.m. initialization which must
+ therefore occur after the list updating procedure.
+
+ Regularized KS variables are introduced at location NPAIRS.  Perturbing
+ neighbours for the relative motion are selected from the c.m. list.  The
+ perturber criterion includes any particle which produces an approximate
+ perturbation $>$ DFMIN.  Polynomials for the regularized solution are
+ initialized by a
+ new method of explicit differentiation which avoids the previous
+ cumbersome boot-strapping procedure.  This procedure includes
+ the first derivative of the Levi-Civita perturbation term (L$\ast$F) and
+ is also satisfactory for large perturbations.  Errors are minimized by taking 
+ an initial step of half the standard value
+ DTAU = 1.0/(DELTAN$\ast$SQRT(2.0$\ast$$\vert$H$\vert$))
+  reduced by the perturbation factor 1.0/(1.0 + 1000.0$\ast$GAMMA)$\ast$$\ast$0.33.  A
+ maximum step $(R_0/M)^{1/2}$/DELTAN (modified by
+ $(R_0/R)^{1/2}$ if $R > R_0$)
+ is used for soft binaries {\it \&} weak hyperbolic 
+ encounters.  STEP(ICOMP) holds the corresponding value in physical
+ units.  STEP(JCOMP) is set large to avoid JCOMP being included in the
+ time-step list.
+
+If option 10 is non-zero the following line is printed: TIME,
+ NAME(ICOMP), NAME(JCOMP), DTAU, R, RI, H, IPAIR, GAMMA, STEPI,
+ LIST(1,ICOMP), where RI is the central distance and STEPI is the time-step of
+ ICOMP.  The termination parameter DFMAX is
+ decreased or increased (up to a maximum) if the number of
+ pairs is near the limit (modify if NPAIRS $>$ 10).  Finally, the prediction  
+ variables X0DOT, F, FDOT, D2, D3, D2R, D3R are set to zero for
+ each new component.  This avoids having a skip test on single
+ regularized components in the coordinate prediction of routine INTGRT, which now
+ gives X = X0 in these rare cases (updated by X0 = X in FINISH).
+\bigskip
+\bigskip
+\centerline {FINISH}
+\bigskip
+
+ This routine terminates the regularization of a pair and introduces direct
+ integration variables for each component.  The pair index IPAIR is set in
+ COMMON variable ICOMP by routine INTGRT to permit phase overlay.  If option 11
+ is non-zero the following diagnostic is printed: TIME, BODY(2$\ast$IPAIR--1),
+ BODY(2$\ast$IPAIR), DTAU, R, RI, H, IPAIR, GAMMA, STEP(2$\ast$IPAIR--1), and
+ LIST(1,2$\ast$IPAIR--1), where RI is the central distance.  Current
+ coordinates and velocities for each component are set in routine
+ RESOLV.  Tables for subsequent pairs are moved up by one and
+ similarly for the corresponding c.m.  The two components are set in
+ locations 2$\ast$NPAIRS -- 1 {\it\&} 2$\ast$NPAIRS.
+
+ The second part adjusts the neighbour lists to the new particle sequence and
+ updates the array LISTR.  One problem arises if more than two c.m.
+ particles are replaced by the components during one regular step and
+ NNB = NNBMAX at the beginning.  If NNBMAX = LMAX -- 3 (where
+ LMAX is size of LIST), the present version permits one extra
+ neighbour to be added after the standard NNB $<$ NNBMAX test, followed
+ by two regularization terminations of c.m. neighbours (i.e. addition
+ of three extra neighbours).  Any further additions will be suppressed
+ but this has not occurred so far (check counter 
+ NSTEPN(10)).  Polynomials for the components are initialized by calling
+ routine FPOLY.  An identical routine FPOLY1 should be compiled 
+ and called if maximum use of phase overlay is desired.
+\bigskip
+\bigskip
+\centerline {RESOLV}
+\bigskip
+
+ This is a dual-purpose routine for obtaining the current global coordinates
+ and velocities of a specified pair from the regularized variables.  A calling
+ argument KDUM = 1 is used when U {\it\&} V (the latter converted from UDOT) must be
+ predicted before the transformation to physical variables.  This is required
+ at output times and when neighbour pairs are resolved for polynomial
+ initialization.  Note that the components of unperturbed binaries (defined by
+ LIST(1,2$\ast$IPAIR--1) = 0) are resolved at the apocentre.  The current binding
+ energy of IPAIR set in ADP(11) is only required by routines MAINPT and MERGE.  If 
+ KDUM = 2 the KS transformation is performed with the
+ current values of U {\it\&} V.  The latter path is used for a pair being terminated,
+ i.e. called from routine FINISH.  In this case the corresponding c.m. velocity
+ is integrated to order F3DOT before the component velocities are set in XDOT
+ {\it\&} X0DOT.
+\bigskip
+\bigskip
+\centerline {FPOLY}
+\bigskip
+
+ This routine obtains regular and irregular force polynomials for individual
+ components after a regularization termination (KCASE = 1) and for the c.m. at
+ the start of a regularization (KCASE = 2).  Each component is treated
+ separately in either case, the essential difference is that the dominant term
+ in F, FDOT, etc is omitted for a calling argument KCASE = 2.  The neighbour
+ lists are copied
+ from the old c.m. (KCASE = 1) or the first component (KCASE = 2).  The
+ respective components are added to the individual neighbour lists which are
+ needed in the force polynomial loops.  Current velocities of all neighbours
+ (including regularized components) are then set.  Any neighbour pairs with
+ perturbed relative motion are resolved in
+ the F {\it\&} FDOT loop but not in the F2DOT {\it\&} F3DOT loop which employs the c.m.
+ approximation (F {\it\&} FDOT not known for regularized components).  If
+ KCASE = 2 the F2DOT {\it\&} F3DOT loop now employs a fast summation over the
+ c.m. rather than summation over both components.
+
+ The effect of non-zero galactic tidal parameters is included consistently in
+ all polynomial derivatives.  Direct contributions from interstellar clouds are
+ also added to the regular force and first difference if required (option 13).
+
+ If KCASE = 2 the c.m. variables for F {\it\&} FDOT are obtained by algebraic 
+ summation over the
+ components.  Time-steps and force differences for the new c.m. are obtained
+ by the expressions used for single particles (as in routine START).  To
+ compensate for the single c.m. summation the irregular step is reduced
+ by a factor of 2.
+
+ The time-step list is modified to be consistent with the new particle
+ sequence.  This saves forming a new list each time (by setting TLIST
+ = TIME).  A call from routine FINISH is made with 2$\ast$IPAIR -- 1 {\it\&} N + IPAIR
+ in JLIST(1{\it\&}2), whereas routine TRANSF sets the old ICOMP {\it\&} JCOMP in
+ JLIST(1{\it\&}2).  These components are first removed from NLIST (if present).  Then
+ follows renaming of the first components {\it\&} c.m. particles of more recent
+ pairs (KCASE = 1) or renaming of exchanged particles (KCASE = 2).  Finally a
+ check is made to add the individual components or new c.m.  The new regularized
+ time-step is checked afterwards in routine TRANSF.
+
+ The neighbour velocities are restored to their former value at the end.  It
+ seems justified to use old velocities (i.e. XDOT = X0DOT) outside the
+ neighbour sphere since the error only affects force derivatives.  Likewise, the
+ omission of particles outside 5$\ast$RS from F2DOT {\it\&} F3DOT
+ should only have a small effect.
+
+  Note that an identical routine with name FPOLY1 must be compiled if using
+ the optimum phase overlay (i.e. CALL FPOLY1 from routine FINISH).  However,
+ most systems can fit the whole program into core without 
+ overlay (size of COMMON dominates if N $>$ 1000).
+\bigskip
+\bigskip
+\centerline {CHOICE OF INPUT PARAMETERS}
+\bigskip
+
+        The integration is controlled by several parameters
+    specified as input.  Among these ETAI, ETAR, DTMIN and DELTAN are
+  the most important ones, whereas SMIN, RMIN, CMSEP2, ECLOSE, DFMIN and DFMAX
+ play a secondary role.  Irregular and regular time-steps are obtained 
+from a relative convergence criterion of the type
+STEP = (ETA$\ast$(F$\ast$F2DOT + FDOT$\ast$$\ast$2)/(FDOT$\ast$F3DOT +
+  F2DOT$\ast$$\ast$2))$\ast$$\ast$0.5, based on force derivatives 
+ (converted from appropriate differences).  Regularized
+ time-steps (non-physical units) are normally computed from the expression
+  DTAU = 1.0/(DELTAN$\ast$SQRT(2.0$\ast$$\vert$H$\vert$), where H is
+ the binding energy per unit mass.  This is reduced by the factor
+    1.0/(1.0 + 1000.0$\ast$GAMMA)$\ast$$\ast$0.33, where GAMMA is the relative two-body
+ perturbation.  One weakly perturbed binary orbit requires 6.28$\ast$DELTAN steps.  A
+  procedure for unperturbed motion of hard binaries is implemented
+ when GAMMA $<$ DFMIN at the apocentre.  Note that without stabilization
+ (option 14) numerical errors may exceed the dynamical effects.
+
+   Suggestions for the dimensionless parameters: ETAI = 0.03, ETAR = 0.08,
+   DELTAN = 8.0, CMSEP2 = 70.0, DFMIN = 1.0E-06, DFMAX = 0.01,
+   QE = 1.0E--04 (per TCR).  For increased accuracy try ETAI = 0.02,
+ ETAR = 0.06, DELTAN = 10.0, CMSEP2 = 100.0, QE = 3.0E--05.  Option 4 is used to skip
+ full predictor loops for neighbour numbers $>$ KZ(4).  If KZ(4) $>$ 0 it is
+ set to the average value ($<$NNB$>$) every output.  About 3/4 of the regular 
+ steps can be skipped, unless a massive body is present (check counter 
+ NSTEPN(12)).  Note that the calculation is halted for relative (kinetic) energy
+ errors DE/KE $>$ 5.0$\ast$QE unless option 2 is non-zero (restart facility).
+
+  As time-step criterion for new regularizations take
+ DTMIN = 0.02$\ast$(RMIN$\ast$$\ast$3/ $<$M$>$)$\ast$$\ast$0.5, where $<$M$>$  
+is the mean mass.  A good
+ choice for the regularizing separation is RMIN = 4$\ast$$<$R$>$/N, corresponding
+ to the close encounter definition ($<$R$>$ = half-mass radius).  Alternatively,
+ try RMIN = $<$R$>$/N for small N or high central densities.  SMIN
+ is used for retaining neighbours with small steps and also for
+ omitting large third-order force derivative corrections which might
+ otherwise produce small regular steps.  Try using
+ SMIN = 2$\ast$DTMIN.  The
+ maximum step $(R_0/M)^{1/2}$/DELTAN (changed from BETA June 1988)
+ used for soft binaries {\it \&} weak hyperbolic encounters is
+ modified by $(R_0/R)^{1/2}$ if $R > R_0$.  If
+ option KZ(17) $>$ 0, ETAI {\it\&} ETAR are increased or 
+ decreased in routine MAINPT using the tolerance QE.  If option KZ(17) $>$ 1,  
+ new values of RMIN {\it\&} DTMIN 
+ include the cube root of the central density contrast (small N
+ limit RMIN $<$ 0.01$\ast$$<$R$>$ adopted for increased efficiency).
+
+ The regularization of soft binaries is terminated by the conditions
+ GAMMA $>$ DFMAX {\it\&} R $>$ R0.  For hyperbolic encounters, the  
+ condition R $>$ RMIN is used.  The regularization
+ of a hard binary (convention R0 = RMIN) is terminated if 
+ GAMMA $>$ 0.5 and the perturber forms a dominant pair with
+ either component.  From the definition of a hard binary and assuming 
+ equal masses, take ECLOSE =
+ N$\ast$$<$M$>$/2$\ast$$<$R$>$ for cluster calculations.  In
+ order to have about NNB neighbours for constant density, take an initial
+ neighbour radius RS0 = (NNB/N)$\ast$$\ast$0.33$\ast$$<$R$>$.  
+ Choose a maximum neighbour number of at least
+ NNBMAX = 10 + N$\ast$$\ast$0.5.  The present version with
+ LIST(40,1010) is designed for NNBMAX $<$ 38 (see the special procedure at label 
+ 79 of FINISH).  NNBMAX = 37 permits correct treatment of at least two
+ regularization terminations among the neighbours of one body during a regular
+ time-step.  Note that one extra neighbour location is required each time the
+ c.m. of a regularized pair is replaced by the two components.
+
+ The parameters RBAR (set in TIDAL(4)) {\it\&} ZMBAR may be used to 
+ include a galactic tidal
+ field (see 1985 book article).  For open clusters with N = 1000 members
+ a scale factor RBAR = 2 -- 3 (pc) is a good
+ choice.  The mean stellar mass is usually taken as ZMBAR = 0.5 (solar
+ masses).  A consistent tidal radius is calculated from these parameters.  For
+ isolated systems take RBAR = 0 {\it\&} ZMBAR $>$ 0, in which case 
+ routine MAINPT sets RTIDE = 10$\ast$$<$R$>$.
+ Note that 2$\ast$RTIDE is used as an escape criterion, together 
+ with a positive energy condition (isolated systems only).
+
+ One input card is also included for interstellar clouds (option 13).  Runs
+ have been made with the following parameters: NCL = 5, RB2 = 28, VCL = 10,
+ SIGMA = 0 (or VCL = 4 {\it\&} SIGMA = 6), CLM = 50 -- 500 {\it\&} RCL2 = 4 -- 8.  
+ Use standard integration parameters and a large energy tolerance 
+ QE since there is no integral of motion.
+\bigskip
+\bigskip
+\centerline {TRIPLE}
+\bigskip
+
+ This is a complete package for treating three-body collisions to be included with program NBODY5                
+   and is described in the 1985 article.  It is based on the Aarseth -- Zare (AZ) regularization method                          
+   ({\it Celestial Mechanics} 10, 185) and consists of the following subroutines:  TRIPLE, START3, TRANS3,                    
+   QDERIV and DIFSY1.  The triple regularization is only implemented if option KZ(5) $>$ 0.  Suitable                     
+   critical encounters are most readily identified by small c.m. steps, using the condition STEP(I) $<$                   
+   DTMIN when a binary is at apocentre.  If satisfied, a search is then made for the intruding third                    
+   body as well as the dominant perturber of the triple motion.  The critical configuration is accepted                 
+   for special treatment if the impact parameter is less than the semi-major axis and the nearest                       
+   perturber effect is suitably small.  Before transferring control to the triple package the binary                    
+   regularization is terminated by a call to routine FINISH from the main routine.                                      
+
+ Routine TRIPLE controls the decision-making and lists the COMMON variables.  First                      
+   it calls routine START3 which sets the
+   initial conditions in the local centre of mass frame and calculates the maximum size for a nearest                   
+   neighbour perturbation of 1.0E--04.  Routine TRANS3 then transforms the local coordinates and                         
+   velocities to regularized variables.  An absolute tolerance of 1.0E-10 is specified for the                          
+   Bulirsch--Stoer integrator DIFSY1.  The resulting relative energy error is usually smaller than the                   
+   tolerance but even so the high-order integrator is quite fast and not much time can be saved by                      
+   reducing the accuracy.  The present formulation integrates 17 equations as described in the AZ paper                 
+   but uses a modified time transformation given by TPR = R1$\ast$R2/(R1 + R2)$\ast$$\ast$0.5 which permits                            
+   stabilization (see the 1976 Cortina paper for details).  The decision-making uses the three mutual                   
+   separations R1, R2, R3, where the latter corresponds to the distance between bodies M(1) {\it\&} M(2).  A                  
+   switch to a new reference body M(3) occurs if R3 becomes the smallest distance.  There are three                     
+   termination criteria:  R3 $>$ RMAX, R1 + R2 + R3 $>$ 3$\ast$RSTAR and one body escaping, or time interval $>$                   
+   100$\ast$TCR.  Here RMAX is the largest permitted size for an unperturbed system (governed by the dominant                
+   perturber), RSTAR is the gravitational radius (defined by the sum of the mass products over the total                
+   energy) and TCR is the local crossing time (different from                                                                          
+   TCR of COMMON5).
+
+ After transformation to regularized variables by routine TRANS3 the integration is carried out by                 
+   routine DIFSY1.  The latter calls routine QDERIV to evaluate the right-hand sides of the first-order                 
+   differential equations at chosen sub-intervals.  On each return to routine TRIPLE the termination                    
+   distance criterion is first checked.  If instead R1 + R2 + R3 $>$ 3$\ast$RSTAR the escape condition is                      
+   evaluated after transformation to physical variables.                                                                
+
+ The three-body regularization is normally terminated by the escape of one body from the triple.  From                     
+   the rigorous criterion of Standish ({\it Celestial Mechanics} 4, 44) escape occurs if the velocity of                 
+   the third body exceeds a critical value given by the masses and the distance to the binary (evaluated                
+   outside RSTAR for RIDOT $>$ 0).  The integration is extended for a short duration (up to                
+   10 tries) if the binary components are inside half the semi-major axis at termination in order to                    
+   get a more reliable value of the new binding energy.  One line of diagnostic information is                       
+   printed at the end:  BINARY (text), component names, binary mass, semi-major axis, eccentricity,                     
+   binding energy (in terms of the triple), relative perturbation on binary, separation of the binary                   
+   components, mass of the third body, its distance to the binary and the relative energy of the triple                 
+   system (scaled by the total energy).  If option KZ(5) $>$ 1 one further line is printed giving details                 
+   of the integration itself, such as the number of switching transformations and minimum separations.  This                  
+   condition is also used to give a line of output at the beginning of regularization (printed in                  
+   routine INTGRT) as follows:  BEGIN TRIPLE (text), IPAIR (binary index), TIME, H(IPAIR), R(IPAIR),                    
+   mass of binary and third body, external perturbation of dominant neighbour, third body separation and                
+   impact parameter, relative energy of third body (scaled by binary energy) and number of active binary                
+   perturbers.                                                                                                          
+
+ Following termination, a second call to routine START3 transforms the local variables back to                   
+  corresponding global values, taking into account possible switching of
+   the particles.  This routine also sets new force polynomials (F {\it\&} FDOT only, higher orders = 0) and                  
+   conservative time-steps for the more distant third body.  The binary itself is accepted for KS                       
+   regularization by routine TRANSF immediately on return to the main program, whereupon the standard                   
+   decision-making takes over.                                                                                          
+\bigskip
+\bigskip
+\centerline {TETRAD}
+\bigskip
+
+ This is a complete package for four-body collisions to be included with program NBODY5.  It uses                
+   the Heggie global regularization method ({\it Celestial Mechanics} 10, 217) as formulated                  
+by Mikkola ({\it M. N.}
+   215, 171).  Apart from the decision-making and interfacing with the N-body method all programming is                 
+   due to Mikkola.  For this reason most parts are without comments but the program is very                     
+   efficient and can be used as a black box.  The relevant main COMMON
+   variables are listed in routine TETRAD.  This program is intended for two colliding binaries                       
+   treated as an isolated system.  The N-body procedures are similar to the case of three colliding                     
+   particles, except here the intruder is also a binary.  Critical configurations are again identified                  
+   in routine INTGRT for small c.m. steps (STEP(I) $<$ DTMIN), using the same procedure as for triple                     
+   collisions.  Thus option KZ(5) has the same meaning in both cases.  Note that the critical impact                    
+   parameter is now modified by the size of the second binary to give an                    
+   increased cross-section (see 1985 article for details).  If
+   option KZ(5) $>$ 1 routine INTGRT prints the same line as for triples, except it starts with the text                  
+   BEGIN TETRAD.  Before transferring control to the tetrad package the regularization of both binaries                 
+  is terminated in the main routine by two successive calls to routine FINISH.                                                    
+
+ Routine TETRAD controls the main flow.  First it calls routine START4 which sets the initial                    
+   conditions in the local centre of mass frame and evaluates the maximum size for a nearest neighbour                  
+   perturbation of 1.0E--04 (as in TRIPLE).  An absolute tolerance of 1.0E--06 is adopted                          
+   for the Bulirsch--Stoer
+   integrator.  This is not as accurate as for triple collisions but should still be satisfactory.  Note                
+   that there are now 49 first-order equations to be integrated, hence the choice of tolerance.  In the                 
+   absence of a rigorous escape criterion for four bodies there are just two termination criteria:  DMAX                
+   $>$ RMAX, and time interval $>$ 100$\ast$TCR.  Here DMAX is the largest                 
+   distance between two particles and RMAX
+   is the maximum permitted size for an unperturbed system or at most 3$\ast$RSTAR, where RSTAR is the                       
+   generalized gravitational radius.  As before TCR is the local                                          
+  crossing time (no COMMON5 conflict).
+
+ The four-body regularization is normally terminated by the distance criterion.  If desirable, it                
+   would be possible to implement an approximate escape test by considering the smallest binary as one                  
+   body and then use the Standish criterion.  Again the integration is extended for a short interval (up                
+   to 10 or 20 tries depending on the configuration) if any binary components are inside half the                       
+   semi-major axis.  One line of output is printed if the relative energy increase of the most energetic                
+   binary exceeds 10 percent.  Note that at least one binary normally survives the collision but it may                 
+   consist of new components arising from exchange.  The diagnostic output contains the following                          
+   information:  BINARY (text), binary mass, semi-major axis, eccentricity, binding energy (in terms of                 
+   the tetrad) and perturbation on the closest pair, perturbation on the second binary (= 0 if none),                   
+   separation of components 3 {\it\&} 4, their relative energy (scaled by the tetrad), binding energy of the                  
+   relative motion (scaled by the initial binary), and finally the total energy of the tetrad system                     
+   (scaled by the total energy).  If option KZ(5) $>$ 1 a further line is also printed giving the                         
+   following details:  END TETRAD (text), indices of the final configuration (closest pair first),                      
+   separations of closest pair (R12) as well as R13 {\it\&} R24, RSTAR (gravitational radius), time interval                  
+   (scaled by local crossing time), number of DIFSY calls, relative energy change of the hardest binary                 
+   and energy of the tetrad system (scaled by total energy).                                                            
+
+ Upon termination, a second call to routine START4 transforms the local variables back to global                 
+   values.  Two of the particles are now initialized for direct N-body integration, again omitting                      
+   second and third order derivatives and taking conservative time-steps.  Note that these particles may                
+   still constitute a binary which may be selected for regularization later.  The closest particle pair                 
+   is accepted for KS regularization by calling routine TRANSF immediately on return to the main program                
+   which continues in the standard way.                                                                                 
+\bigskip
+\bigskip
+\centerline {MERGE}
+\bigskip
+ The third sub-program deals with stable hierarchical configurations and should also be included                 
+   with program NBODY5.  The basic idea is to adopt the c.m. approximation for                     
+  the inner binary of a stable triple,
+   thereby enabling the outer component to be regularized instead.  This has been                        
+   generalized to the case where the outer component is also a binary.  The                    
+   search procedure in routine INTGRT is exactly the same as for triple and tetrad collisions.  Thus                    
+   only compact configurations with STEP(I) $<$ DTMIN for the binary c.m. are selected.  The main                         
+   criterion for accepting a stable triple is that the pericentre of the outer orbit, or impact                         
+   parameter, should exceed the apocentre distance of the inner binary by a safety factor.  The adopted                 
+   ratio of 5 is based on three-body experiments.  An allowance is made for the perturbation effect of                  
+   the most dominant neighbour.  The hierarchical configuration is not accepted for an extended outer                   
+   orbit (i.e., soft binary)
+   since sufficient perturbers may not be available in the c.m. neighbour list.  If option KZ(5) $>$                
+   1 routine INTGRT prints the same line as before, except it starts with the text BEGIN MERGE.                         
+
+ Routine MERGE is called from the main program with COMMON variables ICOMP and JCOMP holding the                 
+   binary pair index (IPAIR) and index of the outer component.                     
+  If JCOMP $>$ N the outer binary is specified as unperturbed with
+  large STEP. The inner binary is then terminated in the standard
+  way by calling routine FINISH.
+    The original binary configuration is saved in a new                     
+   labelled COMMON (also added in routine MYDUMP).  A ghost of zero mass and large coordinates is                       
+   created for index JCOMP to have an available location when the merged binary is activated again.  The                
+   integration variables are set to zero, with large T0(JCOMP),
+   and the ghost is removed from all neighbour lists.  The new                     
+   binary is regularized by a call to routine TRANSF.  Its c.m. name is assigned a negative                  
+   value which enables the corresponding ghost particle to be identified.  The minimum impact parameter                 
+   (5$\ast$A$\ast$(1 -- E)) used for termination is set in variable R0(NPAIRS).  Together with the negative name                   
+   convention this avoids adding new variables to the N-body COMMON.  Finally the total energy is                       
+   updated by subtracting the old binary energy as well as the tidal energy correction due to the c.m.                  
+  approximation.  Hence energy conservation can still be used.
+
+ Routine INTGRT contains an appropriate termination test for hierarchical configurations.  An                    
+   extra check is included at each binary apocentre if the corresponding c.m. name is negative.  It                     
+   consists of comparing the predicted pericentre (2$\ast$SEMI -- R(IPAIR)) with R0(IPAIR)$\ast$(1 +                             
+   GAMMA(IPAIR)) which allows for perturbation effects.  On termination and return to the main program                  
+   control is transferred to routine RESET instead of routine FINISH.                                                   
+
+ Routine RESET restores the old hierarchical configuration of a regularized pair with index IPAIR                
+   held in variable ICOMP.  Up to 10 cases are allowed.  First the current location in the merger table                 
+   is determined.  The perturbers are saved for potential energy correction, reducing any index J $>$ N +                 
+   IPAIR.  A call to the N-body routine FINISH terminates the outer pair.  The correct location of the                  
+   ghost particle is found by testing for zero mass and appropriate name.  This component (denoted                      
+   JCOMP) now becomes the second regularization component, whereas ICOMP is the first and the old JCOMP                 
+   in 2$\ast$NPAIRS + 2 is the outer component with new force polynomials.  The old masses are introduced for                
+   ICOMP {\it\&} JCOMP, whereas coordinates and velocities are given by the current c.m. values combined with                 
+   the relative quantities preserved in COMMON/BINARY/.  Index JCOMP is added to all neighbour lists                    
+   containing ICOMP (combined into one c.m. by TRANSF).  The old binary is regularized by calling                   
+  routine TRANSF.  An unperturbed restart is prepared if the outer
+  component is a c.m. particle, and appropriate potential energy
+  corrections are made.
+   The total energy is modified by the new binding energy and the net potential                 
+   energy change
+   due to resolving the inner pair.  If option KZ(5) $>$ 1 a line of output is printed with the                    
+   following diagnostic:  END MERGER (text), merger index, TIME, component masses, separation of outer                  
+   component and its semi-major axis, binding energy ratios of inner binary and outer component (scaled                 
+   by total energy and inner binary, respectively), relative perturbation of the new inner and old outer                
+   binary, and finally the number of old perturbers.                                                                    
+ Likewise, information about the second merged binary is also
+ printed at termination as follows: SECOND MERGED BINARY (text),
+ pair index, binding energy per unit mass, component masses, binding
+ energy ratio of inner binary and second binary, binding energy of
+ second binary (scaled by total energy), pair separation, and
+ relative perturbation.
+
+ Routine RESET ends by reducing the merger counter NMERGE.  All relevant tables in COMMON/BINARY/                
+   are also updated if JMERGE $<$ NMERGE + 1.  The index JMERGE holds the old number of merged pairs with                 
+   negative c.m. names.  Thus merged pairs may be removed by routine ESCAPE, using a special                        
+   procedure (distant ghosts with zero mass are otherwise retained).  At the end control                    
+   passes back to the main program which then calls routine INTGRT.                                                                             
+\bye

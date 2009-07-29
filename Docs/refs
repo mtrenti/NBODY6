@@ -1,0 +1,34 @@
+References:
+
+S.J. Aarseth (1994), in Galactic Dynamics and N-Body Simulations,
+eds. G. Contopoulos, N.K. Spyrou & L. Vlahos (Springer), p. 277.
+
+S.J. Aarseth (1996), in Dynamical Evolution of Star Clusters,
+eds. P. Hut & J. Makino (Kluwer), p. 161.
+
+S. Mikkola & S.J. Aarseth (1993), Cel. Mech. 57, 439,
+An implementation of N-body chain regularization.
+
+S. Mikkola & S.J. Aarseth (1996), Cel. Mech. 64, 197,
+A slow-down treatment for close binaries.
+
+Seppo Mikkola & Sverre Aarseth (1998), New Astron. 3, 309,
+An efficient integration method for binaries in N-body simulations.
+
+S.J. Aarseth (1999), in Proceedings IAU Colloq. 172, eds. J. Henrard
+& S. Ferraz-Mello, Star cluster simulations: The state of the art.
+
+S.J. Aarseth (1999), PASP, 111, 1333,
+From NBODY1 to NBODY6: The growth of an industry.
+
+S.J. Aarseth (2000), in The Chaotic Universe, eds. V. Gurdzadyan &
+R. Ruffini, NBODY6: A new star cluster simulation code, p. 286.
+
+J. Hurley, O.R. Pols & C.A. Tout (2000), M.N. 315, 543,
+Comprehensive analytic formulae for stellar evolution as a function
+of mass and metallicity.
+
+S.J. Aarseth (2001), New Astron. 6, 277,
+NBODY2: A direct N-body integration code.
+
+S.J. Aarseth (2003), Gravitational N-Body Simulations (CUP).

@@ -1,0 +1,64 @@
+.KEEP_STATE:
+CFLAGS = -O3 -ffast-math
+#suggested by Keigo Nitadori 11/06.
+FFLAGS = -O3 -Wall -ffast-math -march=nocona -ftree-vectorize
+#FFLAGS = -O3 -fbounds-check
+#FFLAGS = -fnonstd -C
+#FFLAGS = -O3 -pg
+#FC = f77
+FC = gfortran
+
+#VPATH = ../Chain:../Nchain
+VPATH = ../ARchain:../ARint:../Extra
+
+SOURCE = \
+nbody6.f adjust.f assess.f bindat.f binev.f binout.f binpop.f \
+block.f bodies.f brake.f brake2.f bsetid.f chaos0.f chaos.f \
+check.f checkl.f chrect.f clint.f cloud.f cloud0.f cmbody.f \
+cmcorr.f cmfirr.f cmfreg.f coal.f comenv.f core.f corerd.f \
+cputim.f data.f decide.f define.f deform.f degen.f delay.f \
+dgcore.f dtchck.f eccmod.f ecirc.f edot.f efac2.f efac3.f \
+expel.f energy.f escape.f events.f evolve.f expand.f fclose.f \
+fcloud.f fcorr.f fdisk.f fhalo.f ficorr.f findj.f findm.f \
+flyby.f fnuc.f fpcorr.f fpert.f fpoly1.f fpoly2.f freeze.f \
+gcinit.f gcint.f giant.f giant3.f gntage.f grrad.f hcorr.f \
+hiarch.f hicirc.f hidat.f higrow.f himax.f himax2.f himod.f \
+hipop.f hirect.f histab.f hivel.f hmdot.f hmdot2.f hotsys.f \
+hrdiag.f hrplot.f hut.f hut2.f iblock.f imf.f imfbd.f imf2.f \
+impact.f induce.f inext.f input.f insert.f instar.f intgrt.f \
+intide.f jacobi.f kepler.f kick.f kick2.f ksapo.f kscorr.f \
+ksin2.f ksinit.f ksint.f kslist.f ksmod.f ksperi.f kspert.f \
+kspoly.f kspred.f ksrect.f ksreg.f ksres.f ksres2.f ksterm.f \
+kstide.f lagr.f lagr2.f levels.f magbrk.f matrix.f mdot.f merge.f \
+merge2.f mix.f mloss.f mlwind.f modify.f mrenv.f mtrace.f mydump.f \
+nbint.f nblist.f nbpot.f nbrem.f nbrest.f nbsort.f nbtide.f newtev.f \
+nstab.f ntint.f offset.f orbit.f output.f peri.f permit.f pfac.f \
+poti.f proto_star.f qtides.f ran2.f reflct.f regint.f  remove.f \
+rename.f reset.f reset2.f resolv.f rkint.f rl.f roche.f rpmax.f \
+rpmax2.f rpmin.f scale.f search.f setup.f setup2.f shrink.f sort1.f \
+spiral.f stability.f star.f start.f stepk.f steps.f stumpf.f \
+subint.f synch.f tail0.f tcirc.f tides.f tides2.f tides3.f touch.f \
+tpert.f trdot.f trdot2.f trflow.f tstab.f tstep.f units.f unpert.f \
+update.f verify.f xtrnl0.f xtrnld.f xtrnlf.f xtrnlp.f xtrnlt.f \
+xtrnlv.f xvpred.f zare.f zcnsts.f zero.f zfuncs.f \
+triple.f derqp3.f difsy3.f erel3.f extend.f qpmod3.f stabl3.f \
+stablz.f start3.f subsys.f tperi.f trans3.f \
+quad.f derqp4.f difsy4.f endreg.f erel4.f ichain.f newreg.f newsys.f \
+qpmod4.f rchain.f rsort.f stabl4.f start4.f status.f trans4.f \
+chain.f archain.f erel.f grbin.f absorb.f chf.f chfind.f chinit.f \
+chlist.f chmod.f chpert.f cpertj.f cpertx.f chterm.f const.f fchain.f ghost.f \
+infall.f inject.f reduce.f reinit.f setsys.f tchain.f xcpred.f xtpert.f \
+chdata.f chpot.f expel2.f hpsort.f inclin.f \
+chfirr.f kcpert.f ksphys.f physks.f pnpert.f xtpert2.f bhstat.f
+
+OBJECTS = $(SOURCE:.f=.o) gasdev.o ran1.o vdisp.o vdisp2.o
+
+nbody7:	$(OBJECTS)
+	$(FC) $(FFLAGS) $(OBJECTS) -o nbody7
+
+print:
+	@- \rm -f NBODY6.TEXT
+	@cat $(SOURCE) > NBODY6.TEXT
+
+clean:
+	rm *.o

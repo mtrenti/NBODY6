@@ -1,0 +1,45 @@
+
+
+                         NBODY5 STRUCTURE
+                         ----------------
+
+
+     The various subroutines have been split into seven parts
+     called START, OUTPUT, INTGRT, KSREG, TRIPLE, QUAD & MERGE.
+     Duplicated routines are denoted by * and shown last.
+
+
+     
+     START     OUTPUT    INTGRT    KSREG     TRIPLE    QUAD      MERGE      
+    --------------------------------------------------------------------
+     START     OUTPUT    INTGRT    KSREG     TRIPLE    QUAD      MERGE
+     ZERO      ADJUST    SORT2     RENAME    START3    START4    NBPOT
+     INPUT     ENERGY    NBINT     KSINIT    TRANS3    NEWSYS    NBREM
+     DEFINE    CORE      SEARCH    FPOLY     DIFSY3    NEWREG    RESET
+     VERIFY    LAGR      FPERT     XVPRED    DERQP3    STATUS    NBREST 
+     DATA      SORT1     CMFIRR    KSPOLY    SUBSYS    RSORT     RESOLV*
+     RAN2      BINOUT    REGINT    KSINT     EXTEND    ICHAIN    KSTERM*
+     SCALE     BINDAT    CMFREG    UNPERT    FCLOSE*   RCHAIN    KSREG*
+     IMF       BODIES    CHECKL    KSRES     CMBODY*   DIFSY4    FCLOSE*
+     BINPOP    ESCAPE    REFLCT    EVOLVE    KSREG*    DERQP4    FPOLY1*
+     XTRNL0    NLMOD     STEPI     CMBODY    FPOLY1*   ENDREG    FPOLY2*
+     CLOUD0    XTRNLV    KEPLER    FCLOSE    FPOLY2*   FCLOSE*   XVPRED*
+     CLOUD     CPUTIM*   MLOSS     FREEZE    XVPRED*   FPOLY1*
+     NBLIST    EVOLVE*   CPUTIM    PERI      PERI*     FPOLY2*
+     FPOLY1    MYDUMP*   MYDUMP    IMPACT    NBPOT*    KSREG*
+     FPOLY2    RESOLV*   MODIFY    SIGNAL              CMBODY*    
+     XTRNLD    REMOVE*   CLINT     KSTERM              XVPRED*
+     CPUTIM*   XVPRED*   FCLOUD    RESOLV              PERI*
+     MYDUMP*             XTRNLF    REMOVE              NBPOT*
+     ENERGY*             KSRES*    UPDATE
+     EVOLVE*             EVOLVE*   KSMOD
+                         FPOLY1*   KSLIST
+                         FPOLY2*   KSPERT
+                         CLOUD*    KSTIDE
+                                   KSPERI
+                                   TIDE
+                                   TPERT
+                                   XTRNLP
+                                   FPOLY1*
+                                   FPOLY2*
+    --------------------------------------------------------------------

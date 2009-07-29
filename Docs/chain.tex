@@ -1,0 +1,80 @@
+\magnification=1200
+\nopagenumbers
+\hsize=6.0truein
+\vsize=10.5truein
+\font\big=cmr10 scaled \magstep1
+\noindent
+\centerline { CHAIN routines}
+\bigskip
+\settabs\+&XXXXXXXx&xXXXXXXXXXXXXX&XXXXXXX  \cr
+\+&Routine &Called by &Description  \cr
+\hrule
+\medskip
+\+&CFUNCS &INVERT &C-functions for two-body iteration. \cr
+\+&CHAIN  &MAIN \& INTGRT &Main routine for chain regularization. \cr
+\+&CHSTAB &CHAIN  &Chain stability test (Mardling criterion; $N = 3$). \cr
+\+&CONST  &CHAIN \& CHINIT &Constants of motion. \cr
+\+&CSTAB2 &CHAIN  &Degenerate triple chain stability test (M 2008). \cr
+\+&CSTAB3 &CSTAB4  &Perturbed triple chain stability test (MA 1999). \cr
+\+&CSTAB4 &CHAIN  &Four-body chain stability test. \cr
+\+&CSTAB5 &CHAIN  &Five-body chain stability test. \cr
+\+&DERQP  &DIFSY1 &Derivatives of chain variables. \cr
+\+&DIFSY1 &CHAIN  &Bulirsch-Stoer integrator. \cr
+\+&EREL   &CHAIN \& DERQP &Dominant two-body energy in chain (also QPMOD). \cr
+\+&HPSORT &SELECT \& CHMOD  &Heapsort algorithm of Press. \cr
+\+&INCLIN &CHSTAB \& RECOIL &Inclination of hierarchical system (also IMPACT). \cr
+\+&INVERT &CHAIN  &Inversion of physical time interval. \cr
+\+&KSPHYS &SWITCH \& TRANSX &Transformation from KS to physical variables. \cr
+\+&PHYSKS &SWITCH \& TRANSQ &Transformation from physical to KS variables. \cr
+\+&QFORCE &DERQP  &Transpose of $Q \cdot 2 F$. \cr
+\+&QPMOD  &CHAIN  &Modification of chain variables for tidal dissipation. \cr
+\+&R2SORT &CHAIN \& CHTERM &Sorting of square two-body separations. \cr
+\+&RECOIL &CHAIN  &Binary analysis and final output. \cr
+\+&REDRAW &SELECT &Checking of chain connections. \cr
+\+&SELECT &CHAIN \& SWITCH &Determination of chain indices. \cr
+\+&SLOW   &CHAIN  &Slow-down treatment of binary (\#26 $>$ 1). \cr
+\+&STABLC &QPMOD  &Chain stability test (synchronous orbit \& large ratios). \cr
+\+&SWCOND &CHAIN  &Switching condition check. \cr
+\+&SWITCH &CHAIN  &Switching of chain. \cr
+\+&TRANSK &EREL \& QPMOD &Transformation to physical momenta \& separations. \cr
+\+&TRANSQ &CHAIN  &Transformation from chain variables to KS. \cr
+\+&TRANSX &CHAIN  &Transformation from KS to chain variables. \cr
+\+&VECTOR &DERQP  &Matrix multiplication of $Q^T \cdot P$. \cr
+\+&XTF    &DERQP  &External chain force. \cr
+\+&XTRNLU &CHAIN  &Harmonic test potential (suppressed). \cr
+\+&YCOPY  &CHAIN \& SWITCH &Copy Y-array from COMMON. \cr
+\+&YSAVE  &CHAIN \& SWITCH &Save Y-array in COMMON. \cr
+\medskip
+\hrule
+\bigskip
+\vfill\eject
+\centerline {NBODY interface routines}
+\bigskip
+\hrule
+\medskip
+\+&ABSORB &CHMOD  &Absorption of chain member(s). \cr
+\+&CHAOS2 &QPMOD &Chaotic treatment of tidal capture (\#27). \cr
+\+&CHDATA &OUTPUT &Basic data for chain members. \cr
+\+&CHFIND &KSREG  &Identification of global c.m. chain index after new KS. \cr
+\+&CHFIRR &CHINIT \& REINIT  &Force \& derivative on chain c.m.  (NBINT \& REGINT). \cr
+\+&CHINIT &CHAIN  &Initialization of chain regularization. \cr
+\+&CHLIST &CHINIT \& CHFIRR &Perturber list for chain (also CHFIND \& REINIT). \cr
+\+&CHMOD  &CHAIN  &Modification of chain membership. \cr
+\+&CHPERT &CHLIST &Chain perturber selection. \cr
+\+&CHPOT  &ENERGY &Potential energy correction due to chain. \cr
+\+&CHTERM &CHAIN  &Termination of chain and N-body initialization. \cr
+\+&EXPEL2 &CMBODY &Common envelope stage for chain (\#19). \cr
+\+&FCHAIN &NBINT \& FFD &Irregular force due to chain (KCPERT \& KSPERT). \cr
+\+&GHOST  &ABSORB &Creation of ghost particle. \cr
+\+&GIANT2 &CHAOS2 &Structure constants for giants (\#19, \#27). \cr
+\+&KCPERT &CMFIRR \& CMFREG &Perturbation on KS pair due to chain. \cr
+\+&REDUCE &CHMOD  \& STABLC &Reduction of chain (single body or binary). \cr
+\+&REINIT &ABSORB \& REDUCE &Re-initialization of chain system. \cr
+\+&RENEW  &CHTERM  &Re-activation of dormant KS binary (\#26 $<$ 2). \cr
+\+&SETSYS &CHINIT \& ABSORB &Selection of chain components. \cr
+\+&TCHAIN &CHINIT \& REINIT &Time interval for next chain perturber or c.m. \cr
+\+&XCPRED &CHFIRR \& FCHAIN &Prediction of chain coordinates \& velocities (XTPERT). \cr
+\+&XTPERT &XTF    &External accelerations due to N-body perturbers. \cr
+\medskip
+\hrule
+\bye

@@ -1,0 +1,24 @@
+
+
+
+       RESTART PARAMETERS:   DTADJ =  2.000  DELTAT =  2.000  TCRIT =    2.0  QE =  2.0E-04  KZ( 2) = 0
+
+
+ ADJUST:  TIME =    2.00  Q = 0.50  DE =  8.60E-07  E = -0.250000  RMIN = 1.9E-05  DTMIN = 1.1E-06  ECLOSE = 1.00  TC =    0  DELTA =  2.2E-07
+
+
+ T =    2.0  N =100000  <NB> = 32  KS =    0  NM =  0  MM = 0  NS =100000  NSTEPS =  140671021        51    9702611         94  DE =  8.6E-07  E = -0.250000
+
+ NRUN =  1  M# =  0  CPU =    13.6  TRC =186.6  DMIN = 8.0E-06 8.0E-06 1.0E+02 1.0E+02  AMIN = 1.0E+02  RMAX = 0.0E+00  RSMIN = 0.06  NEFF = 23546
+
+    <R>  RTIDE  RDENS   RC    NC   MC   RHOD   RHOM  CMAX   <Cn>  Ir/R   UN   NP    RCM    VCM         AZ     EB/E   EM/E   TCR     T6  NESC
+ #1 1.00  10.0  0.01  0.32710877  0.108    9.   233.   12.  38.4  0.01    0    0    0.000  0.0000  -0.001446  0.000  0.000  2.83     0     0
+
+       NNPRED    NBCORR  NBFULL  NBVOID  NRCONV   NICONV  NBSMIN  NBDIS  NBDIS2  NCMDER  NBDER  NFAST  NBFAST    NBLOCK     NBPRED     NBFLUX  NIRECT  NURECT
+ #2     34039         0   41469   20377       0      720       0      0       0       0      0      0       0    134343   25712678       8488       0       0
+
+     NKSTRY  NKSREG  NKSHYP     NKSPER  NPRECT  NMARG   NKSMOD    NTTRY  NTRIP  NQUAD  NCHAIN  NMERG  NEWHI  NSTEPT  NSTEPQ  NSTEPC
+ #3     1940      7       7          0       0      0        0        0      0      0       0      0      0       0       0       0
+
+
+         END RUN   TIME =    2.0  CPUTOT =    0.4  ERRTOT =  0.000001  DETOT =  0.000000

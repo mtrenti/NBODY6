@@ -1,0 +1,194 @@
+
+\documentclass[12pt]{article}
+\usepackage{color}
+\usepackage{graphicx}
+\pagestyle{plain}
+\pagestyle{empty}
+\textwidth 14cm
+\textheight 23cm
+\voffset=-1.0truecm
+\hoffset=-1truecm
+\definecolor{yuck}{rgb}{0.63,0.125,0.94}
+\definecolor{yuck2}{rgb}{0.80,0.125,0.565}
+\def\ZZ#1{$\scriptstyle #1$}
+
+\begin{document}
+
+\centerline {\LARGE \color{red} NBODY6}
+\bigskip
+\medskip
+\centerline {\LARGE \color{blue} A new star cluster simulation code}
+\bigskip
+\bigskip
+\centerline {\Large \color{green} Sverre J Aarseth}
+\bigskip
+\centerline {\Large \color{black}Institute of Astronomy, Cambridge, UK}
+\bigskip
+\bigskip
+{\large
+\noindent
+{\bf Abstract}.~~A new direct $N$-body code, \ZZ {NBODY6},
+supersedes the similar code \ZZ {NBODY5} which
+has been in general use since the early 1980s.
+This code incorporates several recent developments which result in
+improved accuracy as well as performance.
+It is suitable for studying a variety of problems involving point-mass
+interactions, with emphasis on realistic star cluster models.
+
+}
+\bigskip
+{\Large
+The new code \ZZ {NBODY6} is constructed along similar lines to
+\ZZ {NBODY5} but employs a number of improved procedures.
+It consists of some 28800 lines of Fortran 77 divided into 211 routines
+and contains the following main features:
+
+\color{red}
+\medskip
+{$\bullet$}~Hermite integration with hierarchical block-steps
+
+\medskip
+{$\bullet$}~Ahmad-Cohen neighbour scheme
+
+\medskip
+{$\bullet$}~External tidal field -- smooth and irregular component
+
+\color{blue}
+\medskip
+{$\bullet$}~Stumpff KS formulation with Hermite integrator
+
+\color{green}
+\medskip
+{$\bullet$}~Stability of hierarchical systems
+
+\color{cyan}
+\medskip
+{$\bullet$}~Chain regularization of compact subsystems
+
+\color{magenta}
+\medskip
+{$\bullet$}~Slow-down by adiabatic invariance for KS and chain
+
+\color{yuck}
+\medskip
+{$\bullet$}~Synthetic stellar evolution with arbitrary metallicity
+
+\color{yuck2}
+\medskip
+{$\bullet$}~Instantaneous tidal circularization and collisions
+
+\bigskip
+
+\color{red}
+Following several years experience with \ZZ {NBODY4} on the HARP
+special-purpose computer (Aarseth 1996), the fourth-order force
+polynomial with divided differences used by \ZZ {NBODY5} has been 
+replaced by Hermite integration of the same order (Makino 1991).
+Like its predecessor, the code is based on the Ahmad-Cohen (1973)
+neighbour scheme which speeds up the force calculation and
+enables larger systems to be investigated on conventional machines.
+External perturbations due to a smooth tidal field or irregular
+interstellar clouds are included for circular cluster orbits.
+
+\color{blue}
+\medskip
+Close two-body encounters and hard binaries are still studied by the
+classical KS regularization method. However, we now employ a formulation
+with the solution expanded in Taylor series which is modified by Stumpff
+functions and combined with a Hermite iterative development for the
+corrector (Mikkola \& Aarseth 1998).
+This treatment yields machine accuracy in the limit of small
+perturbations at no extra computational cost since larger steps are
+permitted and the perturbing force is only evaluated once even for large
+perturbations.
+
+\color{green}
+\medskip
+The formation of long-lived hierarchical triples by binary-binary encounters
+poses severe time-scale problems for long-term integration.
+Provided the outer pericentre distance is sufficiently large, the inner
+semi-major axis is not subject to secular effects.
+A new semi-analytical stability criterion (Mardling \& Aarseth 1999) is
+implemented to select systems where the inner binary can be replaced
+by the centre-of-mass approximation, leaving the outer orbit as the
+second member of a KS solution until the condition is no longer satisfied
+(e.g. increased eccentricity or large perturbation).
+Likewise, systems of higher multiplicity, such as [B-B] or [[B-B]-B], are
+considered in a similar manner.
+
+\color{cyan}
+\medskip
+Strong interactions between hard binaries and single stars or other
+binaries are treated by chain regularization (Mikkola \& Aarseth 1993).
+Only one compact subsystem with external perturbers is considered  at
+a time but typical durations are short.
+In addition, one unperturbed triple and one quadruple system can also be
+studied simultaneously by multiple regularization techniques.
+Such procedures offer two significant advantages over direct calculations:
+(i) notwithstanding chaos, extremely energetic interactions can be studied
+with confidence, and (ii) the use of well-defined variables is highly
+beneficial for carrying out dissipative modifications of a singular nature.
+
+\color{magenta}
+\medskip
+The principle of adiabatic invariance has been introduced to slow down the
+motion for small perturbations (Mikkola \& Aarseth 1996), both in the case
+of KS and chain regularization.
+By scaling the perturbing force we neglect short-term
+fluctuations of the two-body elements while preserving secular effects.
+This speeds up the integration of hard binaries and facilitates the
+treatment of subsystems containing arbitrarily small periods.
+
+\color{yuck}
+\medskip
+Realistic simulations of star clusters require consideration of stellar
+evolution effects, since the masses and radii may change significantly
+during the cluster life-time.
+The earlier scheme of synthetic stellar evolution for solar composition
+(Tout et al. 1997) has been replaced by a treatment employing an arbitrary
+(fixed) value of the metallicity (Hurley et al. 1999) which enables
+globular cluster stars to be represented.
+Both fast mass loss due to supernovae explosions and slow wind loss
+from giants are included.
+
+\color{yuck2}
+\medskip
+An optional procedure for instant tidal circularization permits the
+subsequent stage of gravitational or magnetic braking to be considered.
+Several types of stellar collisions are also catered for, although the
+relevant cross-sections are awaiting improvements.
+All the procedures involving mass loss or dissipation include appropriate
+corrections in order to maintain formal energy conservation.
+
+\color{blue}
+\medskip
+In conclusion, the code is both more accurate and slightly
+faster than \ZZ {NBODY5} on a standard workstation or laptop, as well as
+being more versatile.
+It is available on request by public ftp, together with some basic
+documentation.
+
+}
+\bigskip
+
+\color{black}
+\begin{thebibliography}{}
+\addtolength{\leftmargin}{0.7cm}
+\setlength{\itemindent}{-0.7cm}
+
+{\Large
+\item[] Aarseth, S.J., 1996, in Dynamical Evolution of Star Clusters, eds
+P. Hut \& J. Makino (Kluwer), p. 161
+\item[] Ahmad, A. \& Cohen, L., 1973, {\it J. Comp. Phys.}, {\bf 12}, 389
+\item[] Hurley, J.R., Tout, C.A. \& Pols, O., 1999, (unpublished)
+\item[] Makino, J., 1991, {\it Astrophys. J.}, {\bf 369}, 200
+\item[] Mardling, R.A. \& Aarseth, S.J., 1999, (in preparation)
+\item[] Mikkola, S. \& Aarseth, S.J., 1993, {\it Cel. Mech.}, {\bf 57}, 439
+\item[] Mikkola, S. \& Aarseth, S.J., 1996, {\it Cel. Mech.}, {\bf 64}, 197
+\item[] Mikkola, S. \& Aarseth, S.J., 1998, {\it New Astron.}, {\bf 3}, 309
+\item[] Tout, C.A., Aarseth, S.J., Pols, O.R. \& Eggleton, P.P., 1997,
+{\it Mon. Not. R. Astr. Soc.}, {\bf 291}, 732
+
+}
+\end{thebibliography}
+\end{document}
