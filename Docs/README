@@ -34,3 +34,7 @@ Input: file `input' is for standard case and `inlog' for general case.
 File 'inbins' is a template for primordial binaries.
 
 The file opt6.pdf contains information about some option changes.
+
+There is more documentation to come that shows how to use the Nbody6 git 
+repository.
+
