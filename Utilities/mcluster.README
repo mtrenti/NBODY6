@@ -1,0 +1,10 @@
+Use mcluster to easily set up clusters for Nbody6 and Nbody4.
+
+Edit the input variables in mcluster.c, save it and then run mcluster.sh. 
+
+You may need to make mcluster.sh executable at first usage by typing: chmod gu+x mcluster.sh
+
+Choose a name for your cluster and mcluster will produce two files: <name>.PAR and <name>.NBODY
+
+<name>.PAR will contain the parameters 
+<name>.NBODY will contain masses, positions and velocities of the stars
