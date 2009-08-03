@@ -25,15 +25,16 @@
 #include<string.h>
 #include<sys/stat.h>
 
-
+//Constants
 #define G 0.0043009211 //in pc*km^2*s^-2*Msun
 #define PI   4.0*atan(1.0)   /* PI */
 #define TWOPI   8.0*atan(1.0)   /* 2PI */
-#define max(a,b)         (a < b) ?  (b) : (a)
 #define GKING 1.0
 #define MTOTKING 1.0
-#define Lifetime(Mstar)  1.13E4*pow(Mstar,-3)+0.6E2*pow(Mstar,-0.75)+1.2 //Myr	[Prantzos 2007]
 
+//Functions
+#define max(a,b)         (a < b) ?  (b) : (a)
+#define Lifetime(Mstar)  1.13E4*pow(Mstar,-3)+0.6E2*pow(Mstar,-0.75)+1.2 //Myr	[Prantzos 2007]
 
 //Allen & Santillan (1991) MW potential - constants:
 #define b1allen 0.3873            //kpc
@@ -52,14 +53,14 @@
 #define M1pointmass 9.565439E+10    //solar masses
 
 
-int generate_x_and_v(int N, double **kubus, double rtide, double rvir);
 int generate_m(int *N, double **kubus, double mlow, double mup, double *M, double *mmean, double MMAX, double Mcl);
+int generate_plummer(int N, double **kubus, double rtide, double rvir);
+int generate_king(int N, double W0, double **kubus, double *rvir, double *rh, double *rking); 
 double densty(double z);
 int odeint(double ystart0, double ystart1, double x1, double x2, double den, int *kount, double *xp, double **yp, int M, int KMAX);	 
 int derivs(double x, double *y, double *dydx, double den);
 int rkqc(double *y,double *dydx, double *x, double *h,double den, double *yscal, double *hdid, double *hnext, double TOL);	
 int rk4(double x, double *y, double *dydx, double h, double *yout, double den);
-int generate_king(int N, double W0, double **kubus, double *rvir, double *rh); 
 
 
 
@@ -69,42 +70,48 @@ int main (int argc, const char * argv[]) {
 	 * Input variables *
 	 *******************/
 	
-	char *output = "testGPU";		//name of output files
+	char *output = "test";			//name of output files
 	unsigned int seed = 0;			//number seed for random number generator; =0 for randomization by local time
 
 	//Physical parameters
 	int N = 0;					    //number of stars, Mcl will be set to 0 if specified!
-	double Mcl = 5000.0;            //total mass of the cluster, only used when N is set to 0, enables usage of maximum stellar mass relation of Weidner & Kroupa 2007
-	int profile = 1;				//density profile; =0 Plummer sphere, =1 King profile (1966)
-	double W0 = 4.0;				//King's W0 paramter [0.3-12.0]
-	double Rh = 1.00;				//Half-mass radius [pc]
+	double Mcl = 5000.0;            //total mass of the cluster, only used when N is set to 0, necessary for usage of maximum stellar mass relation of Weidner & Kroupa 2007
+	int profile = 0;				//density profile; =0 Plummer sphere, =1 King profile
+	double W0 = 5.0;				//King's W0 paramter [0.3-12.0]
+	double Rh = 3.00;				//Half-mass radius [pc]
 	double tcrit = 500.0;			//Simulation time [Tcr (Myr in Nbody6 custom)]
 	int tf = 3;						//tidal field: =1 Near-field approximation, =2 point-mass galaxy, =3 Allen & Santillan (1991) MW potential (or Sverre's version of it)
 	double RG[3] = {8500.0,0.0,0.0}; //Initial Galactic coordinates of the cluster [pc]
 	double VG[3] = {0.0,220.0,0.0};  //Initial velocity of the cluster [km/s]
 
 	//Code parameters
-	int code = 2;					//Nbody version: =0 Nbody6, =1 Nbody4, =2 Nbody6 custom
+	int code = 0;					//Nbody version: =0 Nbody6, =1 Nbody4, =2 Nbody6 custom
 	double dtadj = 10.0;			//DTADJ [Tcr (Myr in Nbody6 custom)], energy-check time step
 	double dtout = 50.0;			//DTOUT [Tcr (Myr in Nbody6 custom)], output interval, must be multiple of DTADJ
 	double dtplot = 100.0;			//DTPLOT [Myr], output of HRdiagnostics, should be multiple of DTOUT
 	int gpu = 1;					//Use of GPU, 0= off, 1= on
 	double RS0 = 1.0;				//Initial radius of neighbour sphere [pc], Nbody6 only
-	int regupdate = 1;				//Update of regularization parameters during computation; 0 = off; 0 > on
-	int etaupdate = 1;				//Update of ETAI & ETAR during computation; 0 = off; 0 > on
-	int esc = 0;					//Removal of escapers; 0 = no removal; 1 = regular removal at 2*R_tide
+	int regupdate = 1;				//Update of regularization parameters during computation; 0 = off, 0 > on
+	int etaupdate = 1;				//Update of ETAI & ETAR during computation; 0 = off, 0 > on
+	int esc = 1;					//Removal of escapers; 0 = no removal, 1 = regular removal at 2*R_tide
 	
 	//Mass function parameters
 	int mfunc = 1;					//0 = single mass stars; 1 = use Kroupa (2001) mass function
 	double mlow = 0.1;				//lower mass limit
-	double mup = 1.2;				//upper mass limit (will be overwritten when N is set to 0 with value of Weidner & Kroupa 2007)
+	double mup = 1.2;				//upper mass limit (will be overwritten when N is set to 0 and weidner is set to 1 with value of Weidner & Kroupa 2007)
 	int weidner = 1;				//Usage of Weidner & Kroupa 2007 relation for most massive star; =0 off, =1 on
-	int mloss = 3;					//Stellar evolution; 0 = off; 3 = Eggleton, Tout & Hurley [KZ19]
-	double epoch = 0.0;		    //Star burst has been ... Myr before [e.g. 1000.0, default = 0.0]
+	int mloss = 3;					//Stellar evolution; 0 = off, 3 = Eggleton, Tout & Hurley [KZ19]
+	double epoch = 0.0;				//Star burst has been ... Myr before [e.g. 1000.0, default = 0.0]
 	double Z = 0.02;				//Metallicity [0.0001-0.03, 0.02 = solar]
 	double FeH = -1.41;				//Metallicity [Fe/H], only used when Z is set to 0
 	int prantzos = 1;				//Usage of Prantzos 2007 relation for the life-times of stars. Set upper mass limit to Lifetime(mup) >= epoch
 	// Lifetime(Mstar) = 1.13E4*pow(Mstar,-3)+0.6E2*pow(Mstar,-0.75)+1.2; //Myr	, Prantzos 2007
+	
+	//Mcluster internal parameters
+	int check = 1;					//Make energy check at end of mcluster; =0 off, =1 on
+	double Zsun = 0.02;				//Solar metallicity
+	int NMAX = 500000;				//Maximum number of stars allowed in mcluster
+	double upper_IMF_limit = 150.0; //Maximum stellar mass allowed in mcluster [Msun]
 	
 	
 	/*********
@@ -124,16 +131,15 @@ int main (int argc, const char * argv[]) {
 	double omega;							//Angular velocity of cluster around the galaxy
 	double rvir;							//Virial radius [pc]
 	double cmr[7];							//For CoM correction
-	double Zsun = 0.02;						//Solar metallicity
+	double rking, rplummer;					//King-, Plummer radius
+	double MMAX;							//most massive star
+	
 	
 	if ((Mcl) && (N)) {
 		printf("\nCAUTION: set either Mcl or N to 0!\nSet Mcl to 0 by default...\n\n");
 		Mcl = 0.0;
 	}
-	
-	//calculate Z from [Fe/H] if Z is set to 0
-	if (!Z) Z = pow(10.0, 0.977*FeH)*Zsun; //Bertelli, Bressan, Chiosi, Fagotto, Nasi, 1994, A&AS, 106, 275
-	
+		
 	//Open output files
 	char PARfile[20], NBODYfile[20];		
 	FILE *PAR, *NBODY;
@@ -148,8 +154,6 @@ int main (int argc, const char * argv[]) {
 	 * Generate star array *
 	 ***********************/
 
-	int NMAX = 500000;						//Maximum number of stars allowed
-
 	int columns = 7;
 	double **kubus;
 	kubus = (double **)calloc(NMAX,sizeof(double *));
@@ -163,15 +167,25 @@ int main (int argc, const char * argv[]) {
 
 	
 	
+	/*******************************************	
+	 * Evaluate Z from [Fe/H] if Z is set to 0 *
+	 *******************************************/
+	
+	 if (!Z) {
+		Z = pow(10.0, 0.977*FeH)*Zsun; //Bertelli, Bressan, Chiosi, Fagotto, Nasi, 1994, A&AS, 106, 275
+		printf("Using Bertelli et al. (1994) relation to convert FeH = %.3f into Z = %.3f\n", FeH, Z);
+	}
+	
+	
+	
 	/**********************************
 	 * Calculate maximum stellar mass *
 	 **********************************/
-	
-	double MMAX;           //most massive star
-	 
-	if (!N && weidner) {
-		mup = 150.0;    //upper mass limit of IMF
-	 
+		 
+	if (!N && weidner && mfunc) {
+		mup = upper_IMF_limit;  
+		printf("Using Weidner & Kroupa (2007) relation for upper stellar mass limit\n");
+		
 		if (Mcl < 1000.0) {
 			MMAX = (log10(Mcl)*0.540563175) - 0.14120167;
 			MMAX = pow(10.0,MMAX);
@@ -187,24 +201,25 @@ int main (int argc, const char * argv[]) {
 		MMAX = mup;
 	}
 	
-	if (epoch && prantzos) {
+	if (mfunc && epoch && prantzos) {
+		printf("Using Prantzos (2007) relation to reduce upper mass limit to Lifetime(mup) > epoch\n");
 		while (Lifetime(MMAX) < sqrt(pow(epoch,2))) {
 			MMAX -= 0.01;
 		}
 	}
 	
-	printf("Maximum stellar mass set to: %.2f\n",MMAX);
 
-	
 	
 	/*******************
 	 * Generate masses *
 	 *******************/
 	
 	if (mfunc) {
+		printf("Maximum stellar mass set to: %.2f\n",MMAX);
 		generate_m(&N, kubus, mlow, mup, &M, &mmean, MMAX, Mcl);
 	} else {
-		for (j=0;j<N;j++) kubus[j][0] = 1.0/N; //set mass to one solar mass for single-mass models
+		printf("Setting stellar masses to 1 solar mass\n");
+		for (j=0;j<N;j++) kubus[j][0] = 1.0/N;
 		mmean = 1.0;
 		M = N*mmean;
 		printf("M = %g\n", M);
@@ -216,7 +231,7 @@ int main (int argc, const char * argv[]) {
 	 * Generate positions and velocities *
 	 *************************************/
 		
-	//calculate tidal radius
+	//evaluate approximate tidal radius assuming circular orbit
 	if (tf == 3) {//in the case of Allen & Santillan potential, assume kappa = 1.4omega (eq. 9 in Kuepper et al. 2009)
 		omega = 220.0/sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
 		rtide = pow(G*M/(2.0*omega*omega),1.0/3.0);
@@ -225,14 +240,19 @@ int main (int argc, const char * argv[]) {
 	}
 	printf("Approximate tidal radius: %g\n", rtide);
 
-
+	
+	//generate scaled pos & vel
 	if (profile == 1) {
 		double rhtemp;
-		generate_king(N, W0, kubus, &rvir, &rhtemp);
-		printf ("rvir = %g\t rh = %g\n", rvir, rhtemp);
+		generate_king(N, W0, kubus, &rvir, &rhtemp, &rking);
+		printf ("rvir = %.5f\t rh = %.5f\t rking = %.5f\t rtide = %.5f (pc)\n", rvir/rhtemp*Rh, Rh, rking/rhtemp*Rh, rtide);
+		rvir = rvir/rhtemp*Rh;
 	} else {
+		printf("\nGenerating Plummer model with parameters: N = %i\t Rh = %.3f\n\n",N,Rh);
 		rvir = Rh/0.772764;
-		generate_x_and_v(N, kubus, rtide, rvir);
+		rplummer = Rh/1.305;
+		generate_plummer(N, kubus, rtide, rvir);
+		printf ("rvir = %.5f\t rh = %.5f\t rplummer = %.5f\t rtide = %.5f (pc)\n", rvir, Rh, rplummer, rtide);
 	}
 	
 	
@@ -240,17 +260,16 @@ int main (int argc, const char * argv[]) {
 	for (j=0; j<7; j++) cmr[j] = 0.0;
 	
 	for (j=0; j<N; j++) {
-		for (i=1;i<7;i++) 
-			cmr[i]+=kubus[j][0]*kubus[j][i]; 
+		for (i=1;i<4;i++) 
+			cmr[i] += kubus[j][0]*kubus[j][i]; 
 	} 
 		
 	for (j=0; j<N; j++) {
-		for (i=1;i<7;i++)
+		for (i=1;i<4;i++)
 			kubus[j][i] -= cmr[i];
 	}
 	
 	
-
 	
 	/**********
 	 * Output *
@@ -306,6 +325,29 @@ int main (int argc, const char * argv[]) {
 
 	fclose(PAR);
 	fclose(NBODY);
+	printf("\nData written to %s and %s\n", PARfile, NBODYfile);
+
+	
+	//energy check
+	double ekin = 0.0;
+	double epot = 0.0;
+	
+	if (check) {
+		printf("\nMaking final energy check... (may take a while but can be aborted by pressing CTRL+c)\n");
+
+		for (j=0; j<N; j++) {
+			ekin += kubus[j][0]*((kubus[j][4]*kubus[j][4])+(kubus[j][5]*kubus[j][5])+(kubus[j][6]*kubus[j][6]));
+			if (j) {
+				for (i=0;i<j-1;i++) 
+					epot -= kubus[i][0]*kubus[j][0]/sqrt((kubus[i][1]-kubus[j][1])*(kubus[i][1]-kubus[j][1])+(kubus[i][2]-kubus[j][2])*(kubus[i][2]-kubus[j][2])+(kubus[i][3]-kubus[j][3])*(kubus[i][3]-kubus[j][3])); 
+			}
+		} 
+		ekin *= 0.5;
+		
+		printf("\nEkin = %g\t Epot = %g\t Etot = %g (Nbody units)\n", ekin, epot, ekin+epot);
+	}
+	
+	
 	
 	for (j=0;j<NMAX;j++) free (kubus[j]);
 	free(kubus);
@@ -362,7 +404,7 @@ int generate_m(int *N, double **kubus, double mlow, double mup, double *M, doubl
 	
 	if (!*N) {
 		*N = floor((Mcl-MMAX)/mth);
-		printf("Determined number of necessary stars: %i\n", *N);
+		printf("Estimated number of necessary stars: %i\n", *N);
 	}
 	
 	
@@ -400,22 +442,30 @@ int generate_m(int *N, double **kubus, double mlow, double mup, double *M, doubl
 	return 0;
 }
 
-int generate_x_and_v(int N, double **kubus, double rtide, double rvir){
-	int i;
-	double a[9], ri, sx, sv, rcut;
-
+int generate_plummer(int N, double **kubus, double rtide, double rvir){
+	int i,j;
+	double a[9], ri, sx, sv, rcut, r2, rvirscale;
+	double ke = 0.0;
+	double pe = 0.0;
+	
 	//Scale length
 	sx = 1.5*TWOPI/16.0;
 	sv = sqrt(1.0/sx);
 	
+	printf("Setting cut-off radius to approximate tidal radius\n");
 	rcut = rtide/(sx*rvir);		//cut-off radius for Plummer sphere = tidal radius in scaled length
-	
+
+	printf("\nGenerating Stars:\n");	
+
 	for (i=0;i<N;i++) {
+		
+		if ((i/1000)*1000 == i) printf("Generating star #%i\n", i);
+			
 		//Positions
 		do {
 			do { 
 					a[1] = drand48();
-				} while (a[1]<1.0E-10);
+			} while (a[1]<1.0E-10);
 			ri = 1.0/sqrt(pow(a[1],-2.0/3.0) - 1.0);
 			
 			a[2] = drand48(); 
@@ -424,14 +474,14 @@ int generate_x_and_v(int N, double **kubus, double rtide, double rvir){
 			kubus[i][3] = (1.0 - 2.0*a[2])*ri;
 			kubus[i][1] = sqrt(ri*ri-pow(kubus[i][3],2))*cos(TWOPI*a[3]);
 			kubus[i][2] = sqrt(ri*ri-pow(kubus[i][3],2))*sin(TWOPI*a[3]); 
-			} while (sqrt(pow(kubus[i][1],2)+pow(kubus[i][2],2)+pow(kubus[i][3],2))>rcut); //reject particles beyond tidal radius
+		} while (sqrt(pow(kubus[i][1],2)+pow(kubus[i][2],2)+pow(kubus[i][3],2))>rcut); //reject particles beyond tidal radius
 		
 		//velocities
 		do {
 			a[4] = drand48(); 
 			a[5] = drand48(); 
 			a[6] = pow(a[4],2)*pow(1.0 - pow(a[4],2),3.5);
-			} while (0.1*a[5]>a[6]);
+		} while (0.1*a[5]>a[6]);
 			
 		a[8] = a[4]*sqrt(2.0)/pow(1.0 + ri*ri,0.25);
 		a[6] = drand48(); 
@@ -440,22 +490,39 @@ int generate_x_and_v(int N, double **kubus, double rtide, double rvir){
 		kubus[i][6] = (1.0 - 2.0*a[6])*a[8];
 		kubus[i][4] = sqrt(a[8]*a[8] - pow(kubus[i][6],2))*cos(TWOPI*a[7]);
 		kubus[i][5] = sqrt(a[8]*a[8] - pow(kubus[i][6],2))*sin(TWOPI*a[7]);
+
+		if (i) {
+			for (j=0;j<i-1;j++) {
+				r2 = (kubus[i][1]-kubus[j][1])*(kubus[i][1]-kubus[j][1]) + (kubus[i][2]-kubus[j][2])*(kubus[i][2]-kubus[j][2]) +(kubus[i][3]-kubus[j][3])*(kubus[i][3]-kubus[j][3]) ;
+				if (r2<0.000001*rvir*rvir) printf("WARNING: %i %i\tdr = %lf\n", i,j,sqrt(r2));
+				pe -=  kubus[i][0]*kubus[j][0]/sqrt(r2);
+			}
+		}
+		
+		ke += kubus[i][0]*(pow(kubus[i][4],2)+pow(kubus[i][5],2)+pow(kubus[i][6],2));
 	}
+
+
+	rvirscale = -GKING*pow(MTOTKING,2)/(2.0*pe);
+	sx = 1.0/rvirscale;
+	
+	ke *= 0.5;
+	sv = sqrt(4.0*ke);
 		
 	// Scale coordinates to N-body units
 	for (i=0;i<N;i++) {
 			kubus[i][1] *= sx;
 			kubus[i][2] *= sx;
 			kubus[i][3] *= sx;
-			kubus[i][4] *= sv;
-			kubus[i][5] *= sv;
-			kubus[i][6] *= sv;
+			kubus[i][4] /= sv;
+			kubus[i][5] /= sv;
+			kubus[i][6] /= sv;
 		}
 
 		return 0;
 }
 
-int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
+int generate_king(int N, double W0, double **kubus, double *rvir, double *rh, double *rking){
 	
 	//ODE variables
 	int M = 10001;				//Number of interpolation points
@@ -483,7 +550,7 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	
 	double pot = 0.0;
 	double totmas;
-	double zh, rking;
+	double zh;
 	
 	double ve, cg1;
 	double fmass, r2;
@@ -499,7 +566,7 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	
 	
 	
-	printf("N = %i\t W0 = %g\n\n", N, W0);
+	printf("\nGenerating King model with parameters: N = %i\t W0 = %g\n\n", N, W0);
 	
 	if (W0>12.0) {
 		printf("W0 too large\n");
@@ -522,7 +589,7 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	//x is King's W, y[0] is z**2, y[1] is 2*z*dz/dW, where z is scaled radius
 	//so x(y[0]) is energy as function of radius^2 and x(y[1]) is the derivative
 	
-	xstart = 0.02;
+	xstart = 0.000001;
 	ystart0 = 2.0*xstart/3.0;
 	ystart1 = -2.0/3.0;
 	
@@ -530,6 +597,8 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	x2 = 0.0;
 	
 	//integrate Poisson's eqn
+	printf("Integrating Poisson's equation\n",kount);
+
 	odeint(ystart0, ystart1, x1, x2, den, &kount, xp, yp, M, KMAX);
 	
 	printf("No of integration steps = %i\n",kount);
@@ -588,7 +657,7 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	 * DETERMINE BASIC QUANTITIES *
 	 ******************************/
 	
-	//Ttotal mass
+	//Total mass
 	totmas = -2.0*pow(yking[M-2][0],1.5)/yking[M-2][1];
 	
 	//Half-mass radius
@@ -603,21 +672,19 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	
 	//Virial radius and King radius
 	*rvir = -pow(totmas,2)/(2.0*pot);
-	rking = sqrt(yking[M-2][0]);
+	*rking = sqrt(yking[M-2][0]);
 	
 	//Central velocity dispersion**2 (3-dimensional) *
 	ve = sqrt(2.0*W0);
 	cg1 = (-pow(ve,3)*exp(-pow(ve,2)/2.0) - 3.0*ve*exp(-pow(ve,2)/2.0) + 3.0/2.0*sqrt(2.0*PI)*erf(ve*sqrt(2.0)/2.0) - pow(ve,5)*exp(-pow(ve,2)/2.0)/5.0)/(-ve*exp(-pow(ve,2)/2.0) + sqrt(2.0*PI)*erf(ve*sqrt(2.0)/2.0)/2.0 - pow(ve,3)*exp(-pow(ve,2)/2.0)/3.0);
 	
-	
+	printf("\nTheoretical values:\n");
 	printf("Total mass (King units) = %g\n", totmas);
 	printf("Viriral radius (King units) = %g\n", *rvir);
-	printf("Half-mass radius (King units) = %g\n", *rh);
-	printf("Half-mass radius (Nbody units) = %g\n", *rh/ *rvir);
-	printf("Edge radius (King units) = %g\n", rking);
-	printf("Edge radius (Nbody units) = %g\n", rking/ *rvir);
-	printf("Concentration = %g\n", log10(rking));
-	printf("Core radius (Nbody units) = %g\n", 1.0/ *rvir);
+	printf("Half-mass radius (King units) = %g\t(Nbody units) = %g\n", *rh, *rh/ *rvir);
+	printf("Edge radius (King units) = %g\t(Nbody units) = %g\n", *rking, *rking/ *rvir);
+	printf("Concentration = %g\n", log10(*rking));
+	printf("Core radius (King units) = %g\t(Nbody units) = %g\n", 1.0, 1.0/ *rvir);
 	printf("3d velocity dispersion**2: %g (central)\t %g (global)\n", cg1, -pot/totmas);
 	
 	
@@ -626,11 +693,11 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	 * GENERATE STAR POSITIONS *
 	 ***************************/
 	
-	printf("\n\n\nGenerating Stars:\n\n");	
+	printf("\nGenerating Stars:\n");	
 	
 	for (i=0;i<N;i++) {
 		
-		if ((i/1000)*1000 == i) printf("Generating star #%i\n", i);
+		if ((i/1000)*1000 == i) printf("Generating stars #%i\n", i);
 		
 		fmass = drand48()*mass[M-1];
 		
@@ -655,7 +722,7 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 		ystar = r*sinth*sin(phi);
 		zstar = r*costh;
 		
-		if (r < rking) {
+		if (r < *rking) {
 			if (r < sqrt(yking[0][0])) {
 				w1 = x[0];
 				w = W0 - (r2/yking[0][0])*(W0 - w1);
@@ -706,7 +773,7 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 			for (j=0;j<i-1;j++) {
 				//r2 = pow(coord[j][0]-xstar,2) + pow(coord[j][1]-ystar,2) + pow(coord[j][2]-zstar,2);
 				r2 = (coord[j][0]-xstar)*(coord[j][0]-xstar) + (coord[j][1]-ystar)*(coord[j][1]-ystar) + (coord[j][2]-zstar)*(coord[j][2]-zstar);
-				if (r2<0.00001**rvir**rvir) printf("WARNING: %i %i\tdr = %lf\n", i,j,sqrt(r2));
+				if (r2<0.000001**rvir**rvir) printf("WARNING: %i %i\tdr = %lf\n", i,j,sqrt(r2));
 				pe -=  mstar*kubus[j][0]/sqrt(r2);//1.0/sqrt(r2);
 			}
 		}
@@ -717,7 +784,6 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	pe = GKING*pe;//*pow(mstar,2);
 	ke *= 0.5;
 	*rvir = -GKING*pow(MTOTKING,2)/(2.0*pe);
-	printf("rvir,pe,ke,MTOT,mstar,G = %g %g %g %g %g %g\n",*rvir,pe,ke,MTOTKING,mstar,GKING);
 	vscale = sqrt(4.0*ke);
 	
 	
@@ -725,8 +791,11 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh){
 	 * OUTPUT *
 	 **********/
 	
-	printf("Edge radius of N-body model in King and NB units: %g\t%g\n", rking, rking/ *rvir);
-	printf("Core radius of N-body model in NB units: %g\n", 1.0/ *rvir);
+	printf("\nActual values:\n");
+	printf("Edge radius (King units) = %g\t(Nbody units) = %g\n", *rking, *rking/ *rvir);
+	printf("Core radius (King units) = %g\t(Nbody units) = %g\n\n", 1.0, 1.0/ *rvir);
+	printf("Concentration = %g\n", log10(*rking));
+
 	for (i=0;i<N;i++) {
 		for (j=0;j<3;j++) {
 			kubus[i][j+1] = coord[i][j]/ *rvir;
