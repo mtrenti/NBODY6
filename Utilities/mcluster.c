@@ -75,17 +75,17 @@ int main (int argc, const char * argv[]) {
 
 	//Physical parameters
 	int N = 0;					    //number of stars, Mcl will be set to 0 if specified!
-	double Mcl = 5000.0;            //total mass of the cluster, only used when N is set to 0, necessary for usage of maximum stellar mass relation of Weidner & Kroupa 2007
+	double Mcl = 40000.0;            //total mass of the cluster, only used when N is set to 0, necessary for usage of maximum stellar mass relation of Weidner & Kroupa 2007
 	int profile = 0;				//density profile; =0 Plummer sphere, =1 King profile
 	double W0 = 5.0;				//King's W0 paramter [0.3-12.0]
-	double Rh = 3.00;				//Half-mass radius [pc]
-	double tcrit = 500.0;			//Simulation time [Tcr (Myr in Nbody6 custom)]
+	double Rh = 22.00;				//Half-mass radius [pc]
+	double tcrit = 6500.0;			//Simulation time [Tcr (Myr in Nbody6 custom)]
 	int tf = 3;						//tidal field: =1 Near-field approximation, =2 point-mass galaxy, =3 Allen & Santillan (1991) MW potential (or Sverre's version of it)
 	double RG[3] = {8500.0,0.0,0.0}; //Initial Galactic coordinates of the cluster [pc]
 	double VG[3] = {0.0,220.0,0.0};  //Initial velocity of the cluster [km/s]
 
 	//Code parameters
-	int code = 0;					//Nbody version: =0 Nbody6, =1 Nbody4, =2 Nbody6 custom
+	int code = 2;					//Nbody version: =0 Nbody6, =1 Nbody4, =2 Nbody6 custom
 	double dtadj = 10.0;			//DTADJ [Tcr (Myr in Nbody6 custom)], energy-check time step
 	double dtout = 50.0;			//DTOUT [Tcr (Myr in Nbody6 custom)], output interval, must be multiple of DTADJ
 	double dtplot = 100.0;			//DTPLOT [Myr], output of HRdiagnostics, should be multiple of DTOUT
@@ -93,7 +93,7 @@ int main (int argc, const char * argv[]) {
 	double RS0 = 1.0;				//Initial radius of neighbour sphere [pc], Nbody6 only
 	int regupdate = 1;				//Update of regularization parameters during computation; 0 = off, 0 > on
 	int etaupdate = 1;				//Update of ETAI & ETAR during computation; 0 = off, 0 > on
-	int esc = 1;					//Removal of escapers; 0 = no removal, 1 = regular removal at 2*R_tide
+	int esc = 0;					//Removal of escapers; 0 = no removal, 1 = regular removal at 2*R_tide
 	
 	//Mass function parameters
 	int mfunc = 1;					//0 = single mass stars; 1 = use Kroupa (2001) mass function
@@ -101,8 +101,8 @@ int main (int argc, const char * argv[]) {
 	double mup = 1.2;				//upper mass limit (will be overwritten when N is set to 0 and weidner is set to 1 with value of Weidner & Kroupa 2007)
 	int weidner = 1;				//Usage of Weidner & Kroupa 2007 relation for most massive star; =0 off, =1 on
 	int mloss = 3;					//Stellar evolution; 0 = off, 3 = Eggleton, Tout & Hurley [KZ19]
-	double epoch = 0.0;				//Star burst has been ... Myr before [e.g. 1000.0, default = 0.0]
-	double Z = 0.02;				//Metallicity [0.0001-0.03, 0.02 = solar]
+	double epoch = 5000.0;				//Star burst has been ... Myr before [e.g. 1000.0, default = 0.0]
+	double Z = 0.0;				//Metallicity [0.0001-0.03, 0.02 = solar]
 	double FeH = -1.41;				//Metallicity [Fe/H], only used when Z is set to 0
 	int prantzos = 1;				//Usage of Prantzos 2007 relation for the life-times of stars. Set upper mass limit to Lifetime(mup) >= epoch
 	// Lifetime(Mstar) = 1.13E4*pow(Mstar,-3)+0.6E2*pow(Mstar,-0.75)+1.2; //Myr	, Prantzos 2007
@@ -494,7 +494,7 @@ int generate_plummer(int N, double **kubus, double rtide, double rvir){
 		if (i) {
 			for (j=0;j<i-1;j++) {
 				r2 = (kubus[i][1]-kubus[j][1])*(kubus[i][1]-kubus[j][1]) + (kubus[i][2]-kubus[j][2])*(kubus[i][2]-kubus[j][2]) +(kubus[i][3]-kubus[j][3])*(kubus[i][3]-kubus[j][3]) ;
-				if (r2<0.000001*rvir*rvir) printf("WARNING: %i %i\tdr = %lf\n", i,j,sqrt(r2));
+				if (r2<0.000001) printf("WARNING: %i %i\tdr = %lf\n", i,j,sqrt(r2));
 				pe -=  kubus[i][0]*kubus[j][0]/sqrt(r2);
 			}
 		}
@@ -771,9 +771,8 @@ int generate_king(int N, double W0, double **kubus, double *rvir, double *rh, do
 		//critical neighbour check
 		if (i) {
 			for (j=0;j<i-1;j++) {
-				//r2 = pow(coord[j][0]-xstar,2) + pow(coord[j][1]-ystar,2) + pow(coord[j][2]-zstar,2);
 				r2 = (coord[j][0]-xstar)*(coord[j][0]-xstar) + (coord[j][1]-ystar)*(coord[j][1]-ystar) + (coord[j][2]-zstar)*(coord[j][2]-zstar);
-				if (r2<0.000001**rvir**rvir) printf("WARNING: %i %i\tdr = %lf\n", i,j,sqrt(r2));
+				if (r2<0.000001) printf("WARNING: %i %i\tdr = %lf\n", i,j,sqrt(r2));
 				pe -=  mstar*kubus[j][0]/sqrt(r2);//1.0/sqrt(r2);
 			}
 		}
