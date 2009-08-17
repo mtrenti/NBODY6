@@ -1,3 +1,4 @@
+
       SUBROUTINE ABSORB(ISUB)
 *
 *
@@ -87,13 +88,17 @@
           J = JLIST(L)
           SIZE(L) = RADIUS(J)
           ISTAR(L) = KSTAR(J)
+          RIJ2 = 0.0
           DO 25 K = 1,3
               LK = LK + 1
               X4(K,L) = X(K,J) - XCM(K)
               XDOT4(K,L) = XDOT(K,J) - VCM(K)
               XCH(LK) = X4(K,L)
               VCH(LK) = XDOT4(K,L)
+              RIJ2 = RIJ2 + (X4(K,L) - X4(K,L-1))**2
    25     CONTINUE
+*       Initialize new inverse distance(s) (some value needed in chpert.f).
+          RINV(L-1) = 1.0/SQRT(RIJ2)
    30 CONTINUE
 *
 *       Re-define old chain variables with respect to new c.m.

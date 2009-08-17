@@ -1,3 +1,4 @@
+
       SUBROUTINE EXPEL(J1,J2,ICASE)
 *
 *
@@ -130,12 +131,13 @@
           CALL COAL(IPAIR,KW1,KW2,MI)
       ELSE
 *
-*       Update evolution times.
+*       Update evolution times and TMDOT.
           EPOCH(I2) = TEV1*TSTAR - AJ2
           TEV(I1) = TEV1
           TEV0(I1) = TEV(I1)
           TEV(I2) = TEV1
           TEV0(I2) = TEV(I2)
+          TMDOT = MIN(TMDOT,TEV1)
 *       Shrink the orbit in case of no coalescence.
           BODY(I1) = M1/ZMBAR
           BODY(I2) = M2/ZMBAR

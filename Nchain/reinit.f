@@ -1,3 +1,4 @@
+
       SUBROUTINE REINIT(ISUB)
 *
 *
@@ -41,6 +42,9 @@
 *
 *       Obtain maximum unperturbed separation based on dominant neighbour.
       CALL EXTEND(ISUB)
+*
+*       Ensure new global coordinates are available in chpert.f.
+      CALL XCPRED(0)
 *
 *       Update decision-making variables for chain regularization.
       TS(ISUB) = TIME

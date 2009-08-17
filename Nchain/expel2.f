@@ -1,3 +1,4 @@
+
       SUBROUTINE EXPEL2(J1,J2,ICASE)
 *
 *
@@ -12,8 +13,8 @@
      &                ZZ(NMX3),WC(NMX3),MC(NMX),
      &                XI(NMX3),PI(NMX3),MASS,RINV(NMXm),RSUM,MKK(NMX),
      &                MIJ(NMX,NMX),TKK(NMX),TK1(NMX),INAME(NMX),NN
-*     COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
-*    &                LISTC(LMAX)
+      COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
+     &                LISTC(LMAX)
       COMMON/CHREG/  TIMEC,TMAX,RMAXC,CM(10),NAMEC(6),NSTEP1,KZ27,KZ30
       COMMON/CCOLL2/  QK(NMX4),PK(NMX4),RIK(NMX,NMX),SIZE(NMX),VSTAR1,
      &                ECOLL1,RCOLL,QPERI,ISTAR(NMX),ICOLL,ISYNC,NDISS1
@@ -139,7 +140,7 @@
 *   7     FORMAT (' FAIL - CHAIN   T E DMS DSEP ',F10.4,F8.4,1P,2E10.2)
 *         CALL FLUSH(78)
           IPHASE = 0
-          GO TO 70
+          GO TO 100
       END IF
 *
 *       Check common envelope condition again after circularization (10/08).
@@ -196,12 +197,13 @@
           ICASE = -ICASE
       ELSE
 *
-*       Update evolution times.
+*       Update evolution times and TMDOT.
           EPOCH(I2) = TEV1*TSTAR - AJ2
           TEV(I1) = TEV1
           TEV0(I1) = TEV(I1)
           TEV(I2) = TEV1
           TEV0(I2) = TEV(I2)
+          TMDOT = MIN(TMDOT,TEV1)
 *
 *       Copy new semi-major axis & masses and specify mass loss.
           SEMI = SEP/SU
@@ -310,8 +312,57 @@
           END IF
       END IF
 *
+*       Initialize neighbour force polynomials on significant mass loss.
+      IF (DM*SMU.GT.0.1) THEN
+*       Save reference body in temporary variables.
+          DO 70 K = 1,3
+              XREL(K) = X(K,ICH)
+              VREL(K) = XDOT(K,ICH)
+              XCM(K) = 0.0
+              VCM(K) = 0.0
+   70     CONTINUE
+          SAVEB = BODY(ICH)
+*
+*       Form new c.m. body.
+          ZM = 0.0
+          DO 80 L = 1,NCH
+              J = JLIST(L)
+              IF (J.EQ.0) GO TO 80
+              ZM = ZM + BODY(J)
+              DO 75 K = 1,3
+                  XCM(K) = XCM(K) + BODY(J)*X(K,J)
+                  VCM(K) = VCM(K) + BODY(J)*XDOT(K,J)
+   75         CONTINUE
+   80     CONTINUE
+          DO 85 K = 1,3
+              X(K,ICH) = XCM(K)/ZM
+              XDOT(K,ICH) = VCM(K)/ZM
+   85     CONTINUE
+          BODY(ICH) = ZM
+*
+*       Loop over all c.m. neighbours (lists contain old name).
+          NNB1 = LIST(1,ICH) + 1
+          DO 95 L = 2,NNB1
+              J = LIST(L,ICH)
+              IF (J.EQ.I1.OR.J.EQ.I3.OR.J.EQ.I4) GO TO 95
+              CALL DTCHCK(TIME,STEP(J),DTK(40))
+              DO 90 KK = 1,3
+                  X0DOT(KK,J) = XDOT(KK,J)
+   90         CONTINUE
+              CALL FPOLY1(J,J,0)
+              CALL FPOLY2(J,J,0)
+   95     CONTINUE
+*
+*       Restore reference body.
+          DO 99 K = 1,3
+              X(K,ICH) = XREL(K)
+              XDOT(K,ICH) = VREL(K)
+   99     CONTINUE
+          BODY(ICH) = SAVEB
+      END IF
+*
 *       Re-define indices of colliding bodies with J1 as new c.m.
-   70 J1 = I1
+  100 J1 = I1
       J2 = I2
 *
       RETURN
