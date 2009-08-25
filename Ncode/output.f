@@ -1,10 +1,12 @@
       SUBROUTINE OUTPUT
+
 *
 *
 *       Output and data save.
 *       ---------------------
 *
       INCLUDE 'common6.h'
+
       COMMON/BINARY/  CM(4,MMAX),XREL(3,MMAX),VREL(3,MMAX),
      &                HM(MMAX),UM(4,MMAX),UMDOT(4,MMAX),TMDIS(MMAX),
      &                NAMEM(MMAX),NAMEG(MMAX),KSTARM(MMAX),IFLAG(MMAX)
@@ -14,12 +16,22 @@
      &                CLM(MCL),CLMDOT(MCL),CLDOT,VCL,SIGMA,RB2,PCL2,
      &                TCL,STEPCL,NCL,NEWCL
       COMMON/ECHAIN/  ECH
+      COMMON/MULTIDIAG/ NP, IUNP, AMIN, MULT, EB
+      COMMON/TNDIAG/ DTI, DTRI, CMAX, RD, NS, SUM
+      COMMON/ACDIAG/ COST, CNNB
+      COMMON/NNCDIAG/ RD, NNB
+      COMMON/VARDIAG/ EM, NESC, I6, NEFF, VRMS, GZ, SX
+      COMMON/ONESDIAG/ X1, V1, UI, VI, XREL2, VREL2
+      COMMON/SDIAG/ XS, VS, BODYS, AS
+      COMMON/JDIAG/ XJ, VJ, BODYJ
+
       REAL*8  X1(3,4),V1(3,4),UI(4),VI(4),XREL2(3),VREL2(3)
       REAL*4  XS(3,NMAX),VS(3,NMAX),BODYS(NMAX),AS(20)
       REAL*4  XJ(3,6),VJ(3,6),BODYJ(6)
       LOGICAL  FIRST,SECOND,THIRD
       SAVE  FIRST,SECOND,THIRD
       DATA  FIRST,SECOND ,THIRD/.TRUE.,.TRUE.,.TRUE./
+      EXTERNAL USER_OUTPUT
 *
 *
 *       Obtain energy error in case routine ADJUST not called recently.
@@ -508,6 +520,8 @@
   145         FORMAT (' ',3F10.3,3F8.1,F7.2)
   150     CONTINUE
       END IF
+
+      CALL USER_OUTPUT()
 *
 *       Update next output interval and initialize the corresponding error.
   100 TNEXT = TNEXT + DELTAT
