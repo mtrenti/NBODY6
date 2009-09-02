@@ -558,8 +558,13 @@
                   CALL CHINIT(ISUB)
                   GO TO 10
               END IF
-              N = N - 1
+*       Terminate for one single body after mass-less collision/coalescence.
+              IF (N.EQ.0) THEN
+                  ITERM = -1
+                  GO TO 100
+              END IF
 *       Re-initialize with reduced membership NCH.
+              N = N - 1
               CALL CHINIT(ISUB)
 *       Activate indicator for new chain (terminates at once with N = 2).
               KCASE = 1
@@ -689,8 +694,8 @@
               END IF
               IF (ITERM.LT.0) GO TO 70
           END IF
-*       Reduce five-body system to triple if biggest binary < 0.04*RSUM.
-      ELSE IF (N.EQ.5) THEN
+*       Reduce five/six-body system to triple if biggest binary < 0.04*RSUM.
+      ELSE IF (N.GE.5) THEN
           CALL CSTAB5(ITERM)
           IF (ITERM.LT.0) GO TO 70
       END IF
