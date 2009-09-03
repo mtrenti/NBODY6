@@ -398,7 +398,7 @@
           KSTAR(I2) = 0
       END IF
 *
-*       Refresh index of dominant body in case of switch in routine MIX.
+*       Refresh index of new dominant body in case of switch in routine MIX.
       JLIST(1) = I1
 *       Obtain potential energy w.r.t. new c.m. and apply tidal correction.
       IF (NSYS.EQ.2) THEN
@@ -418,12 +418,18 @@
           JPERT(1) = I1
           CALL NBREM(NTOT,1,1)
       ELSE
-          JLIST(1) = I1
+*       Determine index and set neighbour membership of original chain c.m.
           JLIST(2) = I2
+          NNB = 0
+          DO 21 L = 1,NSYS
+              J = JLIST(L)
+              IF (LIST(1,J).GT.NNB) THEN
+                  NNB = LIST(1,J)
+                  ICM = J
+              END IF
+   21     CONTINUE
+*
 *       Update neighbour lists of current chain c.m. and remove ghost I2.
-          ICM = I3
-          IF (NSYS.GT.3) ICM = MIN(ICM,I4)
-          NNB = LIST(1,ICM)
           DO 22 L = 1,NNB
               JPERT(L) = LIST(L+1,ICM)
    22     CONTINUE
@@ -503,7 +509,6 @@
               ICOMP = I3
 *       Make quick exit from routine CHAIN on zero membership.
               NSYS = 0
-              NSUB = NSUB - 1
               NCH = 0
               ECH = 0.0
               GO TO 40
