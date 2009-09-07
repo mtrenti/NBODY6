@@ -314,7 +314,7 @@
           NNBMAX = NBZERO*SQRT(FLOAT(N)/FLOAT(NZERO))
 *       Note revised definition of ZNBMAX & ZNBMIN to reduce overflows.
           ZNBMAX = 0.8*NNBMAX
-          ZNBMIN = 0.1*NNBMAX
+          ZNBMIN = MAX(0.1*NNBMAX, 1.0)
       END IF
 *
 *       Include optional fine-tuning of neighbour number (#40 >= 2).
