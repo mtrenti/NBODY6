@@ -159,6 +159,8 @@
           E(4) = E(4) + EI
           NPOP(4) = NPOP(4) + 1
           NSESC = NSESC + 1
+      ELSE
+          IPAIR = I - N
       END IF
       ESESC = ESESC + EI
 *
@@ -278,9 +280,6 @@
 *
 *       See whether the escaper is a single particle or c.m.
       IF (I.LE.N + 1) GO TO 12
-*
-*       Prepare removal of regularized pair.
-      IPAIR = I - N - 1
 *
 *       Skip correction if ghost is also merged binary (NAMEI = 0 below).
       IF (NAMEI.NE.0.AND.BODY(2*IPAIR-1).GT.0.0D0) THEN

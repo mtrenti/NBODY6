@@ -285,15 +285,6 @@
           I1 = 2*(I - N) - 1
           I2 = I1 + 1
           TM = MIN(TEV(I1),TEV(I2))
-          IF(KSTAR(I).GE.10)THEN
-             IWARN = IWARN + 1
-             IF (MOD(IWARN,100).EQ.0) THEN
-                WRITE(6,910) I, NAME(I), KSTAR(I1), KSTAR(I2), KSTAR(I),
-     &                       TTOT, TM - TEV(I)
- 910            FORMAT(' WARNING!    MDOT:    I NAM K* T D(TEV) ',
-     &                               2I6,3I4,F9.2,1P,E10.2)
-             END IF
-          ENDIF
           IF (KSTAR(I).LT.10) THEN
               TEV(I) = 1.0d+10
           ELSE IF (KZ(34).GT.0) THEN
@@ -907,6 +898,8 @@
             IF (NNB.EQ.0) THEN
                 ILIST(2) = N
                 IF (I.EQ.N) ILIST(2) = NTOT
+                LIST(2,I) = ILIST(2)
+                LIST(1,I) = 1
                 NNB = 1
             END IF
 *       Include body #I at the end (counting from location #2).

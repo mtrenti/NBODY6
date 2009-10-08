@@ -570,6 +570,7 @@
       IF (NC.LT.50.AND.RI2.LT.RC2) THEN
           TTMP = TTMP*MIN(1.0D0,0.5D0*(1.0D0 + RI2*RC2IN))
       END IF
+      DT0 = TTMP
 *
 *       Select discrete value (increased by 2, decreased by 2 or unchanged).
       IF (TTMP.GT.2.0*STEPR(I)) THEN
