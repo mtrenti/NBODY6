@@ -266,6 +266,11 @@
       NBLOCK = NBLOCK + 1
       TMIN = 1.0D+10
 *
+*       Predict chain variables and perturber cordinates at new block-time.
+      IF (NCH.GT.0) THEN
+          CALL XCPRED(2)
+      END IF
+*
 *       Advance the pointer (<= NXTLEN) and select next particle index.
    50 LI = LI + 1
       IF (LI.GT.NXTLEN) GO TO 1
@@ -418,3 +423,4 @@
       RETURN
 *
       END
+

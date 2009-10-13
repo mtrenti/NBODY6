@@ -232,10 +232,11 @@
                   END IF
               END IF
    35     CONTINUE
-*       Ensure prediction of chain c.m. not on block-step (may be needed).
+*       Ensure prediction of chain c.m. not on block-step (velocity needed!).
           IF (NCH.GT.0) THEN
               IF (TNEW(ICH).GT.TBLOCK) THEN
                   CALL XVPRED(ICH,0)
+*       Note that XCPRED only predicts coordinates of chain c.m.
               END IF
           END IF
       ELSE
@@ -274,6 +275,11 @@
       NBLOCK = NBLOCK + 1
       TMIN = 1.0D+10
       IKS0 = IKS
+*
+*       Predict chain variables and perturber cordinates at new block-time.
+      IF (NCH.GT.0) THEN
+          CALL XCPRED(2)
+      END IF
 *
       IF (NXTLEN.LE.NPMAX) THEN
 *       Obtain all irregular forces in one loop.

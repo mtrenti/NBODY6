@@ -17,10 +17,10 @@
      &        FPSUM(3),FPD(3*NCMAX),FPDSUM(3)
 *
 *
-*       Check updating perturber list and X & XDOT of chain members.
-      IF (IR.EQ.0) THEN
+*       Check updating perturber list at frequent intervals.
+      IF (IR.GT.0) THEN
           CALL CHLIST(ICH)
-          CALL XCPRED(0)
+*       Note XC & UC for chain members predicted at new block-time.
       END IF
 *
 *       First subtract all perturber forces with respect to single body #ICH.
@@ -182,3 +182,4 @@
       RETURN
 *
       END
+

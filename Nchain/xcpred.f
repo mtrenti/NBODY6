@@ -18,11 +18,16 @@
 *       Check indicator for prediction of perturbers & c.m.
       IF (KCASE.EQ.0) GO TO 4
 *
-*       Add body #ICH to the perturber list for prediction.
-      NNB2 = LISTC(1) + 2
-      LISTC(NNB2) = ICH
+*       Check adding chain c.m. #ICH to perturber list for prediction.
+      IF (KCASE.EQ.1) THEN
+          NNB2 = LISTC(1) + 2
+          LISTC(NNB2) = ICH
+      ELSE
+*      Note KCASE = 2 for chain c.m. prediction at new block-time.
+          NNB2 = LISTC(1) + 1
+      END IF
 *
-*       Predict coordinates of perturbers & c.m. to order FDOT.
+*       Predict coordinates of perturbers & possibly c.m. to order FDOT.
       DO 1 L = 2,NNB2
           J = LISTC(L)
           S = TIME - T0(J)
@@ -31,6 +36,7 @@
           X(1,J) = ((FDOT(1,J)*S + F(1,J))*S + X0DOT(1,J))*S + X0(1,J)
           X(2,J) = ((FDOT(2,J)*S + F(2,J))*S + X0DOT(2,J))*S + X0(2,J)
           X(3,J) = ((FDOT(3,J)*S + F(3,J))*S + X0DOT(3,J))*S + X0(3,J)
+*       Note most recent velocities are used for perturber integration.
     1 CONTINUE
 *
 *       Obtain global coordinates & velocities from current chain & c.m.
@@ -46,3 +52,4 @@
       RETURN
 *
       END
+
