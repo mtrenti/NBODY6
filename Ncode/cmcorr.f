@@ -73,6 +73,7 @@
 *
 *       Re-determine X0 & X0DOT consistently with current corrected X & XDOT.
       DO 70 I = IFIRST,NTOT 
+          IF (BODY(I).EQ.0.0D0) GO TO 70
           DT = TIME - T0(I)
           DTR = TIME - T0R(I)
           A1 = 0.2*DT
@@ -102,3 +103,4 @@
       RETURN
 *
       END
+
