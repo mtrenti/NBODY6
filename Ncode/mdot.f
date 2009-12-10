@@ -395,6 +395,7 @@
                ENDIF
             ENDIF
             TEV(JX(2)) = TEV(JX(1))
+            DIFF = ABS(TEV0(JX(2)) - TEV0(JX(1)))
             ECC = SQRT(ECC2)
             OORB = TWOPI*SQRT((MASS(1)+MASS(2))/(SEP/AURSUN)**3)
             JORB = MASS(1)*MASS(2)/(MASS(1)+MASS(2))
@@ -584,34 +585,34 @@
 *
 *       Limit orbital angular momentum change to 2%.
 *
-          IF(ABS(DJORB).GT.TINY.AND.DTXMIN.GT.0.D0)THEN
-             DTGR = 0.02D0*JORB/ABS(DJORB)
-             IF(DELET.GT.TINY.AND.ECC.GT.0.0011D0)THEN
-                DTGR = MIN(DTGR,0.05D0*ECC/DELET)
-             ENDIF
-             DTGR = MAX(DTGR,100.D0)
-             DTXMIN = MIN(DTXMIN,DTGR)
-             DTGR = DTGR/1.0D+06
-             DJORB = DJORB*DTXMIN
-             JORB = JORB - DJORB
-             JORB = MAX(JORB,1.D0)
-             ECC0 = ECC
-             ECC = MAX(ECC0 - DELET*DTXMIN,0.001D0)
-             ECC2 = ECC*ECC
-             SEP1 = (MASS(1) + MASS(2))*JORB*JORB/
-     &              ((MASS(1)*MASS(2)*TWOPI)**2*AURSUN**3*(1.D0-ECC2))
-             DSEP = SEP - SEP1
-             IF(DSEP.GT.0.D0)THEN
-                Q = MASS(1)/MASS(2)
-                RXL1 = 0.9D0*RAD(1)/RL(Q)
-                SEP1 = MAX(SEP1,RXL1)
-                DSEP = SEP - SEP1
-             ENDIF
-             DTX(1) = DTXMIN
-             DTX(2) = DTX(1)
-          ELSE
-             DJORB = 0.D0
-          ENDIF
+         IF(ABS(DJORB).GT.TINY.AND.(DTXMIN.GT.0.D0.OR.DIFF.EQ.0.D0))THEN
+            DTGR = 0.02D0*JORB/ABS(DJORB)
+            IF(DELET.GT.TINY.AND.ECC.GT.0.0011D0)THEN
+               DTGR = MIN(DTGR,0.05D0*ECC/DELET)
+            ENDIF
+            DTGR = MAX(DTGR,1.0D-04)
+            DTXMIN = MIN(DTXMIN,DTGR)
+            DTGR = DTGR/1.0D+06
+            DJORB = DJORB*DTXMIN
+            JORB = JORB - DJORB
+            JORB = MAX(JORB,1.D0)
+            ECC0 = ECC
+            ECC = MAX(ECC0 - DELET*DTXMIN,0.001D0)
+            ECC2 = ECC*ECC
+            SEP1 = (MASS(1) + MASS(2))*JORB*JORB/
+     &             ((MASS(1)*MASS(2)*TWOPI)**2*AURSUN**3*(1.D0-ECC2))
+            DSEP = SEP - SEP1
+            IF(DSEP.GT.0.D0)THEN
+               Q = MASS(1)/MASS(2)
+               RXL1 = 0.9D0*RAD(1)/RL(Q)
+               SEP1 = MAX(SEP1,RXL1)
+               DSEP = SEP - SEP1
+            ENDIF
+            DTX(1) = DTXMIN
+            DTX(2) = DTX(1)
+         ELSE
+            DJORB = 0.D0
+         ENDIF
 *
 *       Orbital changes owing to mass loss dealt with in hcorr for now.
          DMXMAX = MAX(DMX(1),DMX(2))
@@ -897,7 +898,7 @@
 *       Ensure at least one neighbour.
             IF (NNB.EQ.0) THEN
                 ILIST(2) = N
-                IF (I.EQ.N) ILIST(2) = NTOT
+                IF (I.EQ.N) ILIST(2) = N - 1
                 LIST(2,I) = ILIST(2)
                 LIST(1,I) = 1
                 NNB = 1
