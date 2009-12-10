@@ -86,7 +86,7 @@
 *       Expand the list to include both components since c.m. was deleted.
           KCASE = 2
 *       Only move neighbours down by one if the list has too many members.
-          IF (NNB.GT.LMAX-3) KCASE = 1
+          IF (NNB.GT.NNBMAX-3) KCASE = 1
           IF (NNB.EQ.0) GO TO 76
 *       In this special case L = 2 already.
           L = NNB + 1
