@@ -50,9 +50,12 @@
     9         FORMAT (' CHRECT RESTORE    IC NCH NM2 NMC NMI ',2I4,3I8)
           END IF
       ELSE IF (NCHAOS.EQ.0) THEN
-          WRITE (6,3)  NCHAOS, IPAIR, KSTAR(I), NAME(I1), NAME(I2)
-    3     FORMAT (' DANGER!    CHRECT    NCH KS K* NAM ',3I4,2I6)
-          STOP
+          WRITE (6,3)  NCHAOS, IPAIR, KSTAR(I), NAME(I)
+    3     FORMAT (' CHRECT RESTORE    NCH KS K* NAM ',3I4,I6)
+*       Restore case of former merger with KSTARM < 0 to chaos table.
+          NCHAOS = 1
+          IC = 1
+          NAMEC(NCHAOS) = NAME(I)
       END IF
 *
 *       Save variables for diagnostic output.
@@ -270,3 +273,4 @@
    30 RETURN
 *
       END
+
