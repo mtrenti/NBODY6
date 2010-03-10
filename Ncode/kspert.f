@@ -176,15 +176,19 @@
               RI2 = RI2 + XI(K)**2
               RRDOT = RRDOT + (XI(K) - XI(K+3))*(VI(K) - VI(K+3))
    65     CONTINUE
-          FMP = MP/(RI2*SQRT(RI2))
+          ZF = 1.0/RI2
+          ZF2 = ZF**1.5
+*       Write current mass inside RI as MP*R3*ZF2 (cf. Heggie & Hut p.73).
+          FMP = MP*ZF2
           DO 70 K = 1,3
               XREL = XI(K) - XI(K+3)
               VREL = VI(K) - VI(K+3)
               FP(K) = FP(K) - XREL*FMP
-              FD(K) = FD(K) - (VREL - 3.0*RRDOT*XREL/RI2)*FMP
+              FD(K) = FD(K) - (VREL - 3.0*RRDOT*ZF*XREL)*FMP
    70     CONTINUE
       END IF
 *
       RETURN
 *
       END
+

@@ -93,7 +93,7 @@
 *       Check for hierarchy containing NS/BH (same TEV for inner components).
       IF (I.LT.IFIRST.AND.KZ(28).GT.0) THEN
           IP = KVEC(I)
-          IF (NAME(N+IP).LT.0.AND.KSTAR(I).GE.10) THEN
+          IF (NAME(N+IP).LT.0.AND.KSTAR(I).GE.13) THEN
 *       Distinguish between inner binary components and outer component(s).
               IF (I.EQ.2*IP-1) THEN
                   CALL BRAKE3(IP,ITERM)

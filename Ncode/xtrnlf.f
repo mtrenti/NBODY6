@@ -71,13 +71,23 @@
               RI2 = RI2 + XI(K)**2
               RRDOT = RRDOT + XI(K)*XIDOT(K)
    40     CONTINUE
-          FMP = MP/(RI2*SQRT(RI2))
+          IF (TIME + TOFF.GT.TDELAY) THEN
+              ZMDOT = -MP0*MPDOT/(1.0 + MPDOT*(TIME+TOFF - TDELAY))**2
+          ELSE
+              ZMDOT = 0.0
+          END IF
+          ZF = 1.0/RI2
+          ZF2 = ZF**1.5
+*       Absorb scaling factor in 1/R3 term as MP*ZF2 (cf. Heggie & Hut p.73).
+          FMP = MP*ZF2
           DO 50 K = 1,3
               FREG(K) = FREG(K) - XI(K)*FMP
-              FDR(K) = FDR(K) - (XIDOT(K) - 3.0*RRDOT*XI(K)/RI2)*FMP
+              FDR(K) = FDR(K) - (XIDOT(K) - 3.0*RRDOT*ZF*XI(K))*FMP
+              FDR(K) = FDR(K) - ZMDOT*ZF2*XI(K)
    50     CONTINUE
       END IF
 *
       RETURN
 *
       END
+
