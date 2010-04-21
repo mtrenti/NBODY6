@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2009 by Andreas Kuepper                                 *
+ *   Copyright (C) 2009 by Andreas H.W. Kuepper                            *
  *   akuepper@astro.uni-bonn.de                                            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -61,6 +61,33 @@
 #define MAX_AN  5
 #define MAX_MN  6
 
+//Plumix
+#define SWAP(a,b) { temp = star1[a].mass; star1[a].mass = star1[b].mass; star1[b].mass = temp; };
+#define _G      6.673e-8
+#define _pc     3.0856e18
+#define _M_sun  1.989e33
+#define _R_sun  6.96265e10
+#define _AU     1.49597870e13
+#define _GMsun  1.3272597e26
+#define RSCALE  0.58904862254809  // = 3pi / 16 = 3pi / (16 * |U_tot|)
+#define BUFF_STEP 1024
+
+struct t_star1
+{
+	double mass, U_tmp, Ui;
+	double r[3];
+};
+struct t_star2
+{
+	double v[3];
+	double U, U_sub, E;
+	double UT_add, UT;
+	double rad, M_sub;
+	long   ntry;
+};
+struct t_star1 *star1;
+struct t_star2 *star2;
+
 int generate_m1(int *N, double **star, double mlow, double mup, double *M, double *mmean, double MMAX, double Mcl);
 int generate_m2(int an, double *mlim, double *alpha, double Mcl, double M_tmp, double *subcount, int *N, double *mmean, double *M, double **star, double MMAX);
 double subint(double min, double max, double alpha);
@@ -72,6 +99,11 @@ int odeint(double ystart0, double ystart1, double x1, double x2, double den, int
 int derivs(double x, double *y, double *dydx, double den);
 int rkqc(double *y,double *dydx, double *x, double *h,double den, double *yscal, double *hdid, double *hnext, double TOL);	
 int rk4(double x, double *y, double *dydx, double h, double *yout, double den);
+int generate_segregated_plummer(int N, double S, double **star, double rtide, double rvir);
+void quick(int start, int stop);
+void position(int id, double U_sub, double UT_sub, double S);
+void find_beta(double *avg, double *beta);
+void isorand(double *r);
 int cmpmy(float *x1, float *x2);
 int cmpmy_reverse(float *x1, float *x2);
 int get_binaries(int nbin, double **star, double M, double rvir, int pairing, int N, int adis, double amin, double amax);
@@ -85,7 +117,6 @@ int help();
 /************************************************************
  * to do:
  * - fractalized initial conditions (Goodwin et al 2009)
- * - mass segregation
  * - Eigenevolution (Kroupa 1995)
  ************************************************************/
 
@@ -98,50 +129,51 @@ int main (int argv, char **argc) {
 	
 	//Basic physical parameters
 	int N = 1024;		     	    //number of stars, Mcl will be set to 0 if specified!
-	double Mcl = 0.0;               //total mass of the cluster, only used when N is set to 0, necessary for usage of maximum stellar mass relation of Weidner & Kroupa 2007
-	int profile = 0;				//density profile; =0 Plummer sphere, =1 King profile
+	double Mcl = 0.0;           //total mass of the cluster, only used when N is set to 0, necessary for usage of maximum stellar mass relation of Weidner & Kroupa (2007)
+	int profile = 0;				//density profile; =0 Plummer sphere, =1 King profile (based on king0.f by D.C.Heggie), =2 mass segregated (Subr et al. 2007)
 	double W0 = 1.0;				//King's W0 paramter [0.3-12.0]
+	double S = 0.0;			    	//Fraction of mass segregation for profile = 2 (Subr et al. 2007); =0.0 unsegregated i.e. Plummer, =0.99 completely segregated 
 	double Rh = 0.8;				//Half-mass radius [pc]
-	double tcrit = 500.0;			//Simulation time [N-body units (Myr in Nbody6 custom)]
+	double tcrit = 1000.0;			//Simulation time [N-body units (Myr in Nbody6 custom)]
 	int tf = 3;						//tidal field: =1 Near-field approximation, =2 point-mass galaxy, =3 Allen & Santillan (1991) MW potential (or Sverre's version of it)
 	double RG[3] = {8500.0,0.0,0.0}; //Initial Galactic coordinates of the cluster [pc]
 	double VG[3] = {0.0,220.0,0.0};  //Initial velocity of the cluster [km/s]
 	double Q = 0.5;					//Initial virial ratio; =0.5 virial equilibrium, <0.5 collapsing, >0.5 expanding
 	
 	//Mass function parameters
-	int mfunc = 0;					//0 = single mass stars; 1 = use Kroupa (2001) mass function; 2 = use multi power law
+	int mfunc = 1;					//0 = single mass stars; 1 = use Kroupa (2001) mass function; 2 = use multi power law (based on mufu.c by L.Subr)
 	double single_mass = 1.0;		//stellar mass in case of single-mass cluster 
 	double alpha[MAX_AN] = {-1.35, -2.35, -2.7, 0.0, 0.0};		//alpha slopes for mfunc = 2
 	double mlim[MAX_MN] = {0.08, 0.5, 4.0, 150.0, 0.0, 0.0};	//mass limits for mfunc = 2
 	double mlow = 0.08;				//lower mass limit for mfunc = 1
 	double mup = 100.0;				//upper mass limit for mfunc = 1
-	int weidner = 0;				//Usage of Weidner & Kroupa 2007 relation for most massive star; =0 off, =1 on
-	int mloss = 0;					//Stellar evolution; 0 = off, 3 = Eggleton, Tout & Hurley [KZ19]
-	double epoch = 0.0;				//Star burst has been ... Myr before [e.g. 1000.0, default = 0.0]
+	int weidner = 0;				//Usage of Weidner & Kroupa (2007) relation for most massive star; =0 off, =1 on
+	int mloss = 3;					//Stellar evolution; 0 = off, 3 = Eggleton, Tout & Hurley [KZ19]
+	double epoch = 0.0;				//Star burst has been ... Myr before [e.g. 1000.0, default = 0.0] [not fully functional yet]
 	double Z = 0.02;				//Metallicity [0.0001-0.03, 0.02 = solar]
 	double FeH = -1.41;				//Metallicity [Fe/H], only used when Z is set to 0
-	int prantzos = 0;				//Usage of Prantzos 2007 relation for the life-times of stars. Set upper mass limit to Lifetime(mup) >= epoch
+	int prantzos = 0;				//Usage of Prantzos (2007) relation for the life-times of stars. Set upper mass limit to Lifetime(mup) >= epoch
 	
 	//Binary parameters
 	int nbin = 0;				    //Number of primordial binary systems
-	double fbin = 0.0;				//Primordial binary fraction number of binary systems = 0.5*N*fbin, only used when nbin is set to 0 
+	double fbin = 1.0;				//Primordial binary fraction, number of binary systems = 0.5*N*fbin, only used when nbin is set to 0 
 	int pairing = 0;				//Pairing of binary component masses; 0= random pairing, 1= ordered pairing for M>5Msun
-	int adis = 1;					//Semi-major axis distribution; 0= flat ranging from amin to amax, 1= based on Kroupa (1995) period distribution
+	int adis = 2;					//Semi-major axis distribution; 0= flat ranging from amin to amax, 1= based on Kroupa (1995) period distribution, 2= based on Duquennoy & Mayor (1991) period distribution
 	double amin = 0.0001;			//Minimum semi-major axis for adis = 0 [pc]
 	double amax = 0.01;				//Maximum semi-major axis for adis = 0 [pc]
 	
 	//Code parameters
-	int code = 2;					//Nbody version: =0 Nbody6, =1 Nbody4, =2 Nbody6 custom
+	int code = 0;					//Nbody version: =0 Nbody6, =1 Nbody4, =2 Nbody6 custom
 	unsigned int seed = 0;			//number seed for random number generator; =0 for randomization by local time
-	char *output = "test";			//name of output files
-	double dtadj = 1.0;	     		//DTADJ [N-body units (Myr in Nbody6 custom)], energy-check time step
-	double dtout = 1.0;		    	//DELTAT [N-body units (Myr in Nbody6 custom)], output interval, must be multiple of DTADJ
+	char *output = "test";   		//name of output files
+	double dtadj = 10.0;	   		//DTADJ [N-body units (Myr in Nbody6 custom)], energy-check time step
+	double dtout = 100.0;		    //DELTAT [N-body units (Myr in Nbody6 custom)], output interval, must be multiple of DTADJ
 	double dtplot = 500.0;			//DTPLOT [N-body units (Myr in Nbody6 custom)], output of HRdiagnostics, should be multiple of DTOUT
 	int gpu = 1;					//Use of GPU, 0= off, 1= on
 	int regupdate = 1;				//Update of regularization parameters during computation; 0 = off, 0 > on
 	int etaupdate = 1;				//Update of ETAI & ETAR during computation; 0 = off, 0 > on
 	int esc = 1;					//Removal of escapers; 0 = no removal, 1 = regular removal at 2*R_tide
-	int units = 1;				    //units of mcluster output; 0= Nbody-Units, 1= astrophysical units
+	int units = 0;				    //units of mcluster output; 0= Nbody-Units, 1= astrophysical units
 	
 	//McLuster internal parameters
 	int check = 0;					//Make energy check at end of mcluster; =0 off, =1 on
@@ -155,13 +187,14 @@ int main (int argv, char **argc) {
 	
 	//Command line input
 	int option;
-	while ((option = getopt(argv, argc, "N:M:P:W:R:T:Q:C:A:O:G:o:f:a:m:B:b:S:t:X:V:h:?")) != -1) switch (option)
+	while ((option = getopt(argv, argc, "N:M:P:W:R:S:T:Q:C:A:O:G:o:f:a:m:B:b:s:t:X:V:h:?")) != -1) switch (option)
 	{
 		case 'N': N = atoi(optarg); Mcl = 0.0; break;
 		case 'M': Mcl = atof(optarg); break;
 		case 'P': profile = atoi(optarg); break;
 		case 'W': W0 = atof(optarg); break;
 		case 'R': Rh = atof(optarg); break;
+		case 'S': S = atof(optarg); break;
 		case 'T': tcrit = atof(optarg); break;
 		case 'Q': Q = atof(optarg); break;
 		case 'C': code = atoi(optarg); break;
@@ -178,7 +211,7 @@ int main (int argv, char **argc) {
 			} else { printf("\nError: Number of mass params exceded maximum limit of %d\n", MAX_MN); return 1; }
 		case 'B': nbin = atoi(optarg); break;
 		case 'b': fbin = atof(optarg); break;
-		case 'S': seed = atoi(optarg); break;
+		case 's': seed = atoi(optarg); break;
 		case 't': tf = atoi(optarg); break;
 		case 'X' :
 			if (xn < 3) { RG[xn] = atof(optarg); xn++; break; }
@@ -272,10 +305,10 @@ int main (int argv, char **argc) {
 			MMAX = (log10(Mcl)*0.360268003) + 0.313342031;
 			MMAX = pow(10.0,MMAX);
 		}
-		if (MMAX > mup) MMAX = mup;
 	} else {
 		MMAX = upper_IMF_limit;
-	}
+	}	
+	if (MMAX > mup) MMAX = mup;
 	
 	if (mfunc && epoch && prantzos) {
 		printf("\nUsing Prantzos (2007) relation to reduce upper mass limit to Lifetime(mup) > epoch\n");
@@ -372,6 +405,12 @@ int main (int argv, char **argc) {
 		generate_king(N, W0, star, &rvir, &rhtemp, &rking);
 		printf ("\nrvir = %.5f\t rh = %.5f\t rking = %.5f\t rtide = %.5f (pc)\n", rvir/rhtemp*Rh, Rh, rking/rhtemp*Rh, rtide);
 		rvir = rvir/rhtemp*Rh;
+	} else if (profile == 2) {
+		printf("\nGenerating segregated Plummer model with parameters: N = %i\t S = %g\t Rh = %.3f\n",N, S, Rh);
+		rvir = Rh/0.772764;
+		rplummer = Rh/1.305;
+		generate_segregated_plummer(N, S, star, rtide, rvir);
+		printf ("\nrvir = %.5f\t rh = %.5f\t rplummer = %.5f\t rtide = %.5f (pc)\n", rvir, Rh, rplummer, rtide);
 	} else {
 		printf("\nGenerating Plummer model with parameters: N = %i\t Rh = %.3f\n",N,Rh);
 		rvir = Rh/0.772764;
@@ -412,7 +451,8 @@ int main (int argv, char **argc) {
 	//generate binaries
 	if ((!fbin) && (!nbin)) {
 		printf("\nNo primordial binaries!\n");
-		bin = 3; //KZ(22)
+		bin = 4; //KZ(22)
+//		bin = 3; //KZ(22)
 	} else {
 		if (!nbin) nbin = 0.5*N*fbin;
 		printf("\nCreating %i primordial binary systems, fraction: %6.2f percent.\n", nbin, 2.0*nbin/N*100);
@@ -554,6 +594,7 @@ int generate_m1(int *N, double **star, double mlow, double mup, double *M, doubl
 	if (!*N) {
 		*N = max(floor((Mcl-MMAX)/mth), 1);
 		printf("Estimated number of necessary stars: %i\n", *N);
+		*N = 1;
 	}
 	
 	
@@ -1195,6 +1236,258 @@ int rk4(double x, double *y, double *dydx, double h, double *yout, double den){
 	return 0;
 }
 
+int generate_segregated_plummer(int N, double S, double **star, double rtide, double rvir){
+	long   i, j;
+	double r1, r2, tmp, rcut, rtemp;
+	double U_tot, U_tot1, K_tot;
+	double UT_sub, M_sub;
+	double maxim, beta;
+	int    N_star;
+	double M_tot;
+	star1 = NULL;
+	star2 = NULL;
+	
+	printf("Setting cut-off radius of Plummer sphere to approximate tidal radius\n");
+	rcut = rtide/rvir;		//cut-off radius for Plummer sphere = tidal radius
+	
+	M_tot = 0.;
+	N_star = N;
+	star1 = (struct t_star1 *)realloc(star1, N_star * sizeof(struct t_star1));
+	star2 = (struct t_star2 *)realloc(star2, N_star * sizeof(struct t_star2));
+	
+	for (i=0; i<N_star;i++) {
+		star1[i].mass = star[i][0];
+		M_tot += star1[i].mass;
+	};
+		
+	quick(0, N_star-1);
+	
+	M_sub = U_tot1 = 0.;
+	for (i = 0; i < N_star; i++) {
+		star2[i].U = star1[i].U_tmp = star2[i].UT_add = 0.;
+		star1[i].mass /= M_tot;
+		M_sub += star1[i].mass;
+		star2[i].M_sub = M_sub;
+		if (S > 0.) star1[i].Ui = star1[i].mass * pow(M_sub, -S);
+		else star1[i].Ui = star1[i].mass;
+		for (j = 0; j < i; j++) {
+			tmp = star1[i].Ui * star1[j].Ui;
+			star2[i].UT_add += tmp;
+			star1[i].U_tmp += tmp;
+			star1[j].U_tmp += tmp;
+		};
+		U_tot1 += star2[i].UT_add;
+	};
+	
+	UT_sub = U_tot = K_tot = 0.;
+	
+	for (i = 0; i < N_star; i++) {
+		star2[i].UT_add *= 0.5 / U_tot1;
+		star2[i].UT = star1[i].U_tmp * 0.5 / U_tot1;
+		UT_sub += star2[i].UT_add;
+		do {
+			position(i, U_tot, UT_sub, S);
+			rtemp = sqrt(pow(star1[i].r[0],2)+pow(star1[i].r[1],2)+pow(star1[i].r[2],2));
+		} while (rtemp>rcut);
+		U_tot += star1[i].mass * star2[i].U_sub;
+	};
+	
+	for (i = 0; i < N_star; i++) {
+		if ((i/1000)*1000 == i) printf("Generating star #%i\n", i);
+		maxim = 0.25 * star1[i].mass / star2[i].UT;
+		find_beta(&maxim, &beta);
+		if (beta > 0.)
+		{
+			do
+			{
+				r1 = maxim * drand48();
+				r2 = drand48();
+				r2 *= r2;
+				tmp = 1. - r2;
+			}
+			while (r1 > r2 * exp(beta * log(tmp)));
+		}
+		else
+		{
+			do
+			{
+				r1 = maxim * drand48();
+				r2 = sin(M_PI_2 * drand48());
+				r2 *= r2;
+				tmp = sqrt(1. - r2);
+			}
+			while (r1 > r2 * exp((2.* beta + 1.) * log(tmp)));
+		};
+		
+		star2[i].E = r2 * (star2[i].U + star2[i].U_sub);
+		
+		tmp = sqrt(2. * star2[i].E);
+		isorand(star2[i].v);
+		star2[i].v[0] *= tmp;
+		star2[i].v[1] *= tmp;
+		star2[i].v[2] *= tmp;
+		K_tot += star1[i].mass * star2[i].E;
+	};
+	
+	for (i = 0; i < N_star; i++){
+		//printf("%.12f  %18.14f  %18.14f  %18.14f  %16.12f  %16.12f  %16.12f\n",star1[i].mass, star1[i].r[0], star1[i].r[1], star1[i].r[2], star2[i].v[0], star2[i].v[1], star2[i].v[2]);
+		star[i][0] = star1[i].mass;
+		star[i][1] = star1[i].r[0];
+		star[i][2] = star1[i].r[1];
+		star[i][3] = star1[i].r[2];
+		star[i][4] = star2[i].v[0];
+		star[i][5] = star2[i].v[1];
+		star[i][6] = star2[i].v[2];
+		
+	};
+	
+	return 0;
+}
+
+void quick(int start, int stop) {
+	int i, j;
+	double temp, median;
+	
+	median = 0.5 * (star1[start].mass + star1[stop].mass);
+	
+	i = start;
+	j = stop;
+	while (i <= j)
+	{
+		while ((i <= stop) && (star1[i].mass >= median)) i++;
+		while ((j >= start) && (star1[j].mass <= median)) j--;
+		if (j > i)
+		{
+			SWAP(i,j);
+			i++;
+			j--;
+		}
+		else if (i == j)
+		{
+			i++;
+			j--;
+		};
+	};
+	
+	if (start + 1 < j) quick(start, j);
+	else if ((start < j) && (star1[start].mass < star1[j].mass)) SWAP(start, j);
+	
+	if (i + 1 < stop) quick(i, stop);
+	else if ((i < stop) && (star1[i].mass < star1[stop].mass)) SWAP(i, stop)
+		}
+
+void position(int id, double U_sub, double UT_sub, double S){
+	long   i;
+	double rx, ry, rz, r1;
+	double rfac;
+	
+	rfac = pow(star2[id].M_sub, 2. * S) / (1. - S);
+	
+	star2[id].ntry = 0;
+	
+	do
+	{
+		star2[id].U_sub = 0.;
+		star2[id].ntry++;
+		
+		r1 = drand48();
+		r1 = exp(-2. * log(r1) / 3.);
+		r1 = RSCALE * sqrt(1. / (r1 - 1.));
+		
+		r1 *= rfac;
+		
+		isorand(star1[id].r);
+		star1[id].r[0] *= r1;
+		star1[id].r[1] *= r1;
+		star1[id].r[2] *= r1;
+		star2[id].rad = r1;
+		
+		for (i = 0; i < id; i++)
+		{
+			rx = star1[i].r[0] - star1[id].r[0];
+			ry = star1[i].r[1] - star1[id].r[1];
+			rz = star1[i].r[2] - star1[id].r[2];
+			r1 = sqrt(rx*rx + ry*ry + rz*rz);
+			star1[i].U_tmp = star1[id].mass / r1;
+			star2[id].U_sub += star1[i].mass / r1;
+		};
+		r1 = U_sub + star1[id].mass * star2[id].U_sub;
+	}
+	while (fabs(r1 - UT_sub) > 0.1 * (r1 + UT_sub) / sqrt(1. + id));
+	
+	for (i = 0; i < id; i++) star2[i].U += star1[i].U_tmp;
+}
+
+void find_beta(double *avg, double *beta){
+	int i;
+	double a1, a2, I1, I2, J1, J2;
+	double alo, ah, Ilo, Ih, Jlo, Jh;
+	double tmpavg;
+	
+	if (*avg > 0.75)
+	{
+		*beta = -0.5;
+		*avg = 1.;
+		return;
+	};
+	
+	Ilo = I1 = 3. * M_PI / 16.;
+	Ih  = I2 = 0.2;
+	Jlo = J1 = M_PI / 4;
+	Jh  = J2 = 1. / 3.;
+	alo = a1 = -0.5;
+	ah  = a2 = 0.;
+	
+	tmpavg = I2 / J2;
+	i = 0;
+	while (tmpavg > *avg)
+	{
+		if (!(i & 1))
+		{
+			a1 += 1.;
+			I1 /= 1. + 5. / (2. * a1);
+			J1 /= 1. + 3. / (2. * a1);
+			Ilo = I2; Ih = I1;
+			Jlo = J2; Jh = J1;
+			alo = a2; ah = a1;
+		}
+		else
+		{
+			a2 += 1.;
+			I2 /= 1. + 5. / (2. * a2);
+			J2 /= 1. + 3. / (2. * a2);
+			Ilo = I1; Ih = I2;
+			Jlo = J1; Jh = J2;
+			alo = a1; ah = a2;
+		};
+		tmpavg = Ih / Jh;
+		i++;
+	};
+	
+	*beta = alo + (ah - alo) * (*avg - Ilo / Jlo) / (tmpavg - Ilo / Jlo);
+	
+	if (*beta > 0.) *avg = exp(*beta * log(*beta / (1. + *beta))) / (1. + *beta);
+	else *avg = 2. * exp((2.* *beta + 1.) * log((2.* *beta + 1.) / (2.* *beta + 3.))) / (2.* *beta + 3.);
+}
+
+void isorand(double *r) {
+	double rad;
+	
+	do
+	{
+		r[0] = 2. * drand48() - 1.;
+		r[1] = 2. * drand48() - 1.;
+		r[2] = 2. * drand48() - 1.;
+		rad = r[0]*r[0] + r[1]*r[1] + r[2]*r[2];
+	}
+	while ((rad > 1.) || (rad < 0.0001));
+	
+	rad = sqrt(rad);
+	r[0] /= rad;
+	r[1] /= rad;
+	r[2] /= rad;
+}
+
 int cmpmy(float *x1, float *x2) { //smallest to largest
 	if(*x1<*x2) return -1;
 	return 1;
@@ -1210,9 +1503,14 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 	double m1, m2, ecc, abin;
 	double pmat[3][2], rop[2], vop[2], rrel[3], vrel[3];
 	double ea, mm, eadot, cosi, inc, peri, node;
-	double Pmin = 10, delta = 45, eta = 2.5;
+	double Pmin = 10, delta = 45, eta = 2.5; //parameters of Kroupa (1995) period distribution
 	double lP, P;	
-
+	double u1, u2;
+	double q, p, x1, x2;	
+	double lP1, lP2, lPmean, lPsigma;
+	lPmean = 4.8;	//mean of Duquennoy & Mayor (1991) period distribution [days]
+	lPsigma = 2.3;	//full width half maximum of Duquennoy & Mayor (1991) period distribution [days]
+	
 	//Specify component pairing
 	if (pairing) {
 		order(star, N, M);
@@ -1225,13 +1523,13 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 		m2 = star[2*i+1][0];
 		
 		//Specify semi-major axis
-		if (adis == 1) {
+		if (adis == 0) {
 			//flat semi-major axis distribution
 			if (!i) printf("\nApplying flat semi-major axis distribution with amin = %g and amax = %g.\n", amin, amax);
 			if (!i) amin /= rvir;
 			if (!i) amax /= rvir;
 			abin = amin+drand48()*(amax-amin);
-		} else {
+		} else if (adis == 1) {
 			//derive from Kroupa (1995) period distribution
 			if (!i) printf("\nDeriving semi-major axis distribution from Kroupa (1995) period distribution.\n");
 			do {
@@ -1244,7 +1542,31 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 			abin = pow((m1+m2)*M*P*P,(1.0/3.0));//AU
 			abin /= 206264.806;//pc
 			abin /= rvir;//Nbody units
-		}			
+		} else {
+			//derive from Duquennoy & Mayor (1991) period distribution
+			if (!i) printf("\nDeriving semi-major axis distribution from Duquennoy & Mayor (1991) period distribution.\n");
+			do {
+				//generate two random numbers in the interval [-1,1]
+				u1 = 2.0*drand48()-1.0;
+				u2 = 2.0*drand48()-1.0;
+					
+				//combine the two random numbers
+				q = u1*u1 + u2*u2;
+			} while (q > 1.0);
+
+			p = sqrt(-2.0*log(q)/q);
+			x1 = u1*p;
+			x2 = u2*p;
+			lP1 = lPsigma*x1 + lPmean;
+			lP2 = lPsigma*x2 + lPmean;
+
+			P = pow(10,lP1);//days
+			P /= 365.25;//yr
+			
+			abin = pow((m1+m2)*M*P*P,(1.0/3.0));//AU
+			abin /= 206264.806;//pc
+			abin /= rvir;//Nbody units			
+		}
 
 		
 		//Specify eccentricity distribution
@@ -1490,13 +1812,15 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 }
 
 int help() {
-	printf("\n Usage: mcluster -[N|M|P|W|R|T|Q|C|A|O|G|o|f|a|m|B|b|S|t|X|V|h|?]  \n");
+	printf("\n Usage: mcluster -[N|M|P|W|R|S|T|Q|C|A|O|G|o|f|a|m|B|b|s|t|X|V|h|?]\n");
 	printf("                                                                     \n");
 	printf("       -N <number> (number of stars)                                 \n");
 	printf("       -M <value> (mass of cluster; specify either N or M)           \n");
-	printf("       -P <1|2> (density profile; 1= Plummer, 2= King 1966)          \n");
+	printf("       -P <1|2|3> (density profile; 1= Plummer, 2= King 1966,        \n");
+	printf("                   3= Subr. et al (2007) mass-segregated)            \n");
 	printf("       -W <1-12> (W0 parameter for King 1966 profile)                \n");
 	printf("       -R <value> (half-mass radius [pc])                            \n");
+	printf("       -S <0.0-0.99> (S parameter for Subr. et al (2007) profile)    \n");
 	printf("       -T <value> (tcrit in N-body units)                            \n");
 	printf("       -Q <value> (virial ratio)                                     \n");
 	printf("       -C <1|2> (code; 1= Nbody6, 2= Nbody4)                         \n");
@@ -1511,7 +1835,7 @@ int help() {
 	printf("                   multiple times, from low mass to high mass [Msun])\n");
 	printf("       -B <number> (number of binary systems)                        \n");
 	printf("       -b <value> (binary fraction, specify either B or b)           \n");
-	printf("       -S <number> (seed for randomization; 0= randomize by timer)   \n");
+	printf("       -s <number> (seed for randomization; 0= randomize by timer)   \n");
 	printf("       -t <1|2|3> (tidal field; 1= near-field, 2= point-mass,        \n");
 	printf("                   3= Milky-Way potential)                           \n");
 	printf("       -X <value> (component of galactocentric radius vector, use 3x)\n");
@@ -1525,5 +1849,6 @@ int help() {
 	printf("                                                                     \n");
 
 	return 0;
-}
+}	
+
 
