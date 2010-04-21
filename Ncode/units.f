@@ -7,17 +7,17 @@
       INCLUDE 'common6.h'
 *
 *
-*       Define GM & PC in cgs units and AU in pc.
-      GM = 6.67D-08*1.989D+33
-      PC = 3.0857D+18
-      AU = 2.0627E+05
+*       Define GM & PC in cgs units and #AU in pc (2008 IAU values).
+      GM = 6.6743D-08*1.9884D+33
+      PC = 3.0856776D+18
+      AU = PC/1.4959787D+12
 *
 *       Form scaling factors for binary periods A*SQRT(A/M) to yrs and days.
       YRS = (RBAR*AU)**1.5/SQRT(ZMBAR)
       DAYS = 365.24*YRS
 *
 *       Specify conversion factors for lengths to solar radii & AU.
-      SU = PC/(AU*6.96D+10)*RBAR*AU
+      SU = PC/(AU*6.955D+10)*RBAR*AU
       RAU = RBAR*AU
 *
 *       Copy solar mass scaling to new variable (M = BODY*<M>).
@@ -47,7 +47,7 @@
      &              '  V* =',F6.3,'  T* =',F6.3,'  <M> =',F5.2,
      &              '  SU =',1P,E8.1)
 *
-*       Define relevant parameter for the GR case (RZ = 6*<m>/c^2).
+*       Define relevant parameter for the GR case (RZ = 6*<m>/c2).
       IF (KZ(27).EQ.3.OR.KZ(28).GT.0) THEN
           CLIGHT = 3.0D+05/VSTAR
           RZ = 6.0*ZMASS/(FLOAT(N)*CLIGHT**2)
@@ -59,3 +59,5 @@
       RETURN
 *
       END
+
+

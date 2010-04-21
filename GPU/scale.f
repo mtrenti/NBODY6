@@ -6,7 +6,16 @@
 *
       INCLUDE 'common6.h'
       REAL*8  RSAVE(3,NMAX),VSAVE(3,NMAX),BSAVE(NMAX)
+      real*8 G, M_sun, R_sun, pc, Km, Kmps
+      real*8 mscale, lscale, vscale
 *
+*       Define physical constants (consistent with IAU & routine UNITS).
+      G = 6.6743-08
+      M_sun = 1.9884D+33
+      R_sun = 6.955D+10
+      pc = 3.0856776D+18
+      Km = 1.0D+05
+      Kmps = 1.0D+05
 *
 *       Read virial ratio, rotation scaling factors & tidal radius.
       READ (5,*)  Q, VXROT, VZROT, RTIDE
@@ -70,7 +79,7 @@
       END IF
 *
 *       Include procedure for primordial binaries & singles from fort.10.
-      IF (KZ(22).EQ.4) THEN
+      IF ((KZ(22).EQ.4.OR.KZ(22).EQ.-1).AND.(NBIN0.GT.0)) THEN
 *       Save the binaries for re-creating two-body motion after scaling.
           DO 45 I = 1,2*NBIN0
               BSAVE(I) = BODY(I)
@@ -83,14 +92,18 @@
           DO 47 I = 1,NBIN0
               I1 = 2*I - 1
               I2 = 2*I
-              ZMB  = BODY(I1) + BODY(I2)
+*       Prevent over-writing BODY(I) when I = 1 and 2*I - 1 = 1.
+              B1 = BODY(I1)
+              B2 = BODY(I2)
+              ZMB  = B1 + B2
               BODY(I) = ZMB
               DO 46 K = 1,3
-                  X(K,I) = (BODY(I1)*X(K,I1) + BODY(I2)*X(K,I2))/ZMB
-                  XDOT(K,I) = (BODY(I1)*XDOT(K,I1) +
-     &                         BODY(I2)*XDOT(K,I2))/ZMB
+                  X(K,I) = (B1*X(K,I1) + B2*X(K,I2))/ZMB
+                  XDOT(K,I) = (B1*XDOT(K,I1) +
+     &                         B2*XDOT(K,I2))/ZMB
    46         CONTINUE
    47     CONTINUE
+*
 *       Move any single stars up for scaling together with c.m. particles.
           NSING = N - 2*NBIN0
 *       Note assumption ZMASS = 1 including any singles (skips DO 50 loop).
@@ -101,13 +114,19 @@
                  XDOT(K,NBIN0+I) = XDOT(K,2*NBIN0+I)
    48        CONTINUE
    49     CONTINUE
-*       Redefine N & NTOT for total energy calculation (NTOT = N for ZKIN).
+*       Re-define N & NTOT for total energy calculation (NTOT = N for ZKIN).
           N = NBIN0 + NSING
           NTOT = N
+*
+          write (6,491)  NBIN0
+  491     format (/,12X,'SCALE: ', I5,
+     &                  ' Binaries converted to barycentres')
       END IF
+*       Save total number of C.Ms.
+      NCM = NTOT
 *
 *       Skip scaling of masses for unscaled upload or planetesimal disk.
-      IF (KZ(22).GT.2.OR.KZ(5).EQ.3) GO TO 52
+      IF (KZ(22).GT.2.OR.KZ(22).EQ.-1.OR.KZ(5).EQ.3) GO TO 52
 *
 *       Scale masses to standard units of <M> = 1/N and set total mass.
       DO 50 I = 1,N
@@ -117,6 +136,33 @@
 *
 *       Obtain the total kinetic & potential energy.
    52 CALL ENERGY2
+*
+      if (KZ(22).EQ.-1) then
+*       Save K.E. and P.E. of C.Ms for TCR & TRH (units of M_sun, pc & km/s).
+          ZCM = ZKIN
+          PCM = POT
+*
+*       Evaluate total energy in physical units (M_sun pc2 s-2).
+*       G (g-1 cm3 s-2) ==> G (M_sun-1 pc3 s-2)
+          G = G/(pc**3/M_sun)
+*       Form kinetic energy as KE (M_sun Km2 s-2) ==> KE (M_sun pc2 s-2).
+          ZKIN = ZKIN*Km**2/pc**2
+*       PE term = (M_sun-1 pc3 s-2)*(M_sun2 pc-1) = (M_sun pc2 s-2).
+          EPH = ZKIN - G*POT
+          IF (EPH.GT.0.0) EPH = -EPH
+*       Set conversion factors (N-body to M_sun, pc, km/s; Heggie & Mathieu).
+          mscale = ZMASS
+          lscale = G*mscale**2*(-0.25/EPH)
+          vscale = sqrt(G*mscale/lscale)*(pc/Km)
+*       Specify virial radius and mean mass (pc & M_sun).
+          RBAR = lscale
+          ZMBAR = ZMASS/(N+NBIN0)
+*
+          write (6,53)  mscale, lscale, vscale
+   53     format (/,12X,'SCALE: Conversion factors: MSCALE = ',F10.3,
+     &                  ' M_sun;  LSCALE = ',F6.3,' pc;  VSCALE = ',
+     &                    F6.3,' km/sec')
+      end if
 *
 *       Use generalized virial theorem for external tidal field.
       IF (KZ(14).GT.0) THEN
@@ -158,7 +204,7 @@
               WRITE (6,54)  E0
    54         FORMAT (/,12X,'UNSCALED ENERGY    E =',F10.6)
           END IF
-      ELSE
+      ELSE IF(KZ(22).NE.-1) THEN
 *       Scale non-zero velocities by virial theorem ratio.
           IF (ZKIN.GT.0.0D0) THEN
               QV = SQRT(Q*VIR/ZKIN)
@@ -185,8 +231,8 @@
           END IF
 *
           WRITE (6,65)  SX, ETOT, BODY(1), BODY(N), ZMASS/FLOAT(N)
-   65     FORMAT (//,12X,'SCALING:    SX =',F6.2,'  E =',1PE10.2,
-     &                   '  M(1) =',E9.2,'  M(N) =',E9.2,'  <M> =',E9.2)
+   65     FORMAT (/,12X,'SCALING:    SX =',F6.2,'  E =',1PE10.2,
+     &                  '  M(1) =',E9.2,'  M(N) =',E9.2,'  <M> =',E9.2)
 *
 *       Scale coordinates & velocities to the new units.
           DO 70 I = 1,N
@@ -198,7 +244,7 @@
       END IF
 *
 *       Perform second stage of the optional uploading procedure.
-      IF (KZ(22).EQ.4) THEN
+      IF ((KZ(22).EQ.4.OR.KZ(22).EQ.-1).AND.(NBIN0.GT.0)) THEN
 *       Place any singles last and re-create the original binaries.
           DO 72 I = NSING,1,-1
               L1 = NBIN0
@@ -228,11 +274,41 @@
                   XDOT(K,2*IP) = V1 - BSAVE(2*IP-1)*VREL/ZMB
    73         CONTINUE
    74     CONTINUE
-*       Set final values of the particle number.
+*       Set final values of the particle number (increase from N + NBIN0).
           N = N + NBIN0
           NZERO = N
           NTOT = N
+*
+          write (6,741)  NBIN0
+  741     format (/,12X,'SCALE: ', I5, ' Binaries restored')
       END IF
+*
+*       Scale masses, coordinates and velocities for input in physical units.
+      if (KZ(22).EQ.-1) then
+*       Re-calculate the scaled total mass.
+          ZMASS = 0.0D0
+          DO 743 I = 1,NTOT
+             BODY(I) = BODY(I)/mscale
+             ZMASS = ZMASS + BODY(I)
+             DO 742 K = 1,3
+                X(K,I) = X(K,I)/lscale
+                XDOT(K,I) = XDOT(K,I)/vscale
+  742        continue
+  743     continue
+*
+*       Perform energy check after scaling.
+          CALL ENERGY2
+          write (6,745)  ZKIN - POT
+  745     format (/,12X,'SCALE: Scaled total energy: ',F8.5)
+*       Set energy of singles & C.Ms only in N-body units for TCR & TRH.
+*       escale = mscale*(vscale**2)
+          SX = 1.0
+          ZKIN = ZCM/(mscale*vscale**2)
+          POT = PCM*lscale/mscale**2
+          E0 = ZKIN - POT
+          write (6,746)  E0
+  746     format (/,12X,'SCALE: Scaled C.M. energy: ',F8.5)
+      end if
 *
 *       Introduce optional BH binary (SEMI in scaled N-body units).
       IF (KZ(11).GT.0) THEN
@@ -279,7 +355,7 @@
    80     CONTINUE
       END IF
 *
-*       Check option for writing the initial conditions on unit 10.
+*       Check option for writing the initial conditions on unit #10.
       IF (KZ(22).EQ.1) THEN
           DO 85 I = 1,N
               WRITE (10,84)  BODY(I), (X(K,I),K=1,3), (XDOT(K,I),K=1,3)
@@ -287,11 +363,19 @@
    85     CONTINUE
       END IF
 *
+*       Check for writing initial conditions (physical units) on unit #101.
+      IF (KZ(22).EQ.-1.OR.KZ(22).EQ.5) THEN
+          DO 86 I = 1,N
+              write (101,84)  BODY(I)*mscale, (X(K,I)*lscale,K=1,3),
+     &                        (XDOT(K,I)*vscale,K=1,3)
+   86     CONTINUE
+      END IF
+*
 *       Check option for reading initial subsystems.
       IF (KZ(24).GT.0) THEN
           K = KZ(24)
           DO 90 I = 1,K
-              READ (5,*)  (X(J,I),J=1,3), (XDOT(J,I),J=1,3)
+              READ (5,*)  BODY(I), (X(J,I),J=1,3), (XDOT(J,I),J=1,3)
    90     CONTINUE
       END IF
 *
@@ -312,7 +396,7 @@
       END IF
 *
 *       Print half-mass relaxation time & equilibrium crossing time.
-      A1 = FLOAT(N)
+      A1 = FLOAT(NCM)
       TRH = 4.0*TWOPI/3.0*(VC*RSCALE)**3/(15.4*ZMASS**2*LOG(A1)/A1)
       WRITE (6,95)  TRH, TCR, 2.0*RSCALE/VC
    95 FORMAT (/,12X,'TIME SCALES:   TRH =',1PE8.1,'  TCR =',E8.1,
@@ -321,3 +405,5 @@
       RETURN
 *
       END
+
+
