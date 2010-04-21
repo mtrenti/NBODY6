@@ -8,6 +8,8 @@
       COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
      &                LISTC(LMAX)
       REAL*8  XI(3),XIDOT(3),FIRR(3),FREG(3),FD(3),FDUM(3),DV(3)
+      SAVE TCALL
+      DATA TCALL /0.0D0/
 *
 *
 *       Check regularization criterion for single particles.
@@ -19,8 +21,9 @@
       END IF
 *
 *       Include close encounter search for low-eccentric massive binaries.
-      IF (IKS.EQ.0.AND.STEP(I).LT.4.0*DTMIN) THEN
+      IF (IKS.EQ.0.AND.STEP(I).LT.4.0*DTMIN.AND.TCALL.LT.TTOT) THEN
 *       Consider massive single bodies in absence of subsystems. 
+          TCALL = TTOT + 0.01
           IF (I.LE.N.AND.BODY(I).GT.2.0*BODYM.AND.NSUB.EQ.0) THEN
 *
 *       Obtain two-body elements and relative perturbation.
@@ -28,10 +31,10 @@
               CALL ORBIT(I,JMIN,SEMI,ECC,GI)
 *
               EB = -0.5*BODY(I)*BODY(JMIN)/SEMI
-              IF (EB.LT.EBH.AND.GI.LT.0.25.AND.JMIN.GE.IFIRST) THEN
+              IF (EB.LT.EBH.AND.GI.LT.0.001.AND.JMIN.GE.IFIRST) THEN
                   APO = SEMI*(1.0 + ECC)
 *       Check eccentricity (cf. max perturbation) and neighbour radius.
-                  IF (ECC.LT.0.5.AND.APO.LT.0.02*RS(I)) THEN
+                  IF (ECC.LT.0.25.AND.APO.LT.0.02*RS(I)) THEN
 *                     WRITE (6,3)  NAME(I), NAME(JMIN), ECC, SEMI, EB
 *   3                 FORMAT (' KS TRY:    NAM E A EB ',
 *    &                                     2I6,F7.3,1P,2E10.2)
@@ -185,7 +188,7 @@
                   J = LISTC(L)
                   IF (J.GT.I) GO TO 70
                   IF (J.EQ.I) THEN
-                      CALL FCHAIN(I,0,XI,XIDOT,FIRR,FD)
+                      CALL FCHAIN(I,1,XI,XIDOT,FIRR,FD)
                       GO TO 70
                   END IF
    65         CONTINUE
@@ -320,3 +323,4 @@
       RETURN
 *
       END
+

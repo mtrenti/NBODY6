@@ -31,10 +31,10 @@
               CALL ORBIT(I,JMIN,SEMI,ECC,GI)
 *
               EB = -0.5*BODY(I)*BODY(JMIN)/SEMI
-              IF (EB.LT.EBH.AND.GI.LT.0.25.AND.JMIN.GE.IFIRST) THEN
+              IF (EB.LT.EBH.AND.GI.LT.0.001.AND.JMIN.GE.IFIRST) THEN
                   APO = SEMI*(1.0 + ECC)
 *       Check eccentricity (cf. max perturbation) and neighbour radius.
-                  IF (ECC.LT.0.5.AND.APO.LT.0.02*RS(I)) THEN
+                  IF (ECC.LT.0.25.AND.APO.LT.0.02*RS(I)) THEN
 *                     WRITE (6,3)  NAME(I), NAME(JMIN), ECC, SEMI, EB
 *   3                 FORMAT (' KS TRY:    NAM E A EB ',
 *    &                                     2I6,F7.3,1P,2E10.2)
@@ -187,7 +187,7 @@
                   J = LISTC(L)
                   IF (J.GT.I) GO TO 70
                   IF (J.EQ.I) THEN
-                      CALL FCHAIN(I,0,XI,XIDOT,FIRR,FD)
+                      CALL FCHAIN(I,1,XI,XIDOT,FIRR,FD)
                       GO TO 70
                   END IF
    65         CONTINUE
