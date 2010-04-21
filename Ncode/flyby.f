@@ -85,7 +85,7 @@
 *       Determine vectorial perturbation on intruder and closest component.
       CALL FPERT(JCOMP,J,NNB,PERT)
       GJ = PERT*RJ2/(BODY(JCOMP) + BODY(J))
-      RJ = SQRT(RJ2)
+      RJ = SQRT(RJJ)
 *     WRITE (6,18) NAME(J),NAME(JCOMP),GAMMA(IPAIR),GJ,R(IPAIR),RJ,RD,
 *    &             RDOT
 *  18 FORMAT (' NMJ NMJC GI GJ R RJ RD RDI ',2I5,2F6.2,1P,4E9.1)
@@ -103,7 +103,7 @@
           APO = APO + ABS(SEMI2)
       END IF
 *
-      SEMIJ = 2.0/SQRT(RJJ) - VJJ/(BODY(JCOMP) + BODY(J))
+      SEMIJ = 2.0/RJ - VJJ/(BODY(JCOMP) + BODY(J))
       SEMIJ = 1.0/SEMIJ
 *       Check for chain regularization test or standard termination.
       IF (PMIN.LT.APO.AND.RSUM.LT.XF*RMIN.AND.RDOT.LT.0.0) THEN
@@ -119,3 +119,4 @@
    20 RETURN
 *
       END
+
