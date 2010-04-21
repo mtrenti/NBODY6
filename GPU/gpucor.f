@@ -87,7 +87,7 @@
       IF (NCH.GT.0) THEN
 *       Distinguish between chain c.m. and any other particle.
           IF (NAME(I).EQ.0) THEN
-              CALL CHFIRR(I,1,XI,XIDOT,FIRR,FD)
+              CALL CHFIRR(I,0,XI,XIDOT,FIRR,FD)
           ELSE
 *       Search the chain perturber list for #I.
               NP1 = LISTC(1) + 1
@@ -218,7 +218,7 @@
           FDR(3) = FDR(3) + (DV(3) - A3*DRDV)*DR3I
    35 CONTINUE
 *
-*       Copy bacl to original list.
+*       Copy back to original list.
       DO 38 L = 2,NNB1+1
           ILIST(L) = JLIST(L)
    38 CONTINUE
@@ -229,8 +229,8 @@
 *
 *       Stabilize NNB between ZNBMIN & ZNBMAX by square root of contrast.
    40 A3 = ALPHA*SQRT(FLOAT(NNB)*RS(I))/RS2
-      NBP = A3
       A3 = MIN(A3,ZNBMAX) 
+      NBP = A3
 *       Reduce predicted membership slowly outside half-mass radius.
       IF (RI2.GT.RH2) THEN
           A3 = A3*RSCALE/SQRT(RI2)
@@ -242,10 +242,10 @@
       IF ((A3 - FLOAT(NNB0))*(A3 - FLOAT(NNB)).LT.0.0) A4 = SQRT(A4)
 *
 *       Modify volume ratio by radial velocity factor outside the core.
+      RIDOT = (XI(1) - RDENS(1))*XIDOT(1) +
+     &        (XI(2) - RDENS(2))*XIDOT(2) +
+     &        (XI(3) - RDENS(3))*XIDOT(3)
       IF (RI2.GT.RC2.AND.KZ(39).EQ.0.AND.RI2.LT.9.0*RH2) THEN
-          RIDOT = (XI(1) - RDENS(1))*XIDOT(1) +
-     &            (XI(2) - RDENS(2))*XIDOT(2) +
-     &            (XI(3) - RDENS(3))*XIDOT(3)
           A4 = A4*(1.0 + RIDOT*DTR/RI2)
       END IF
 *
@@ -274,9 +274,8 @@
 *       Modify neighbour sphere radius by volume factor.
       IF (IRSKIP.EQ.0) THEN
           A3 = ONE3*A4
+*       Use second-order cube root expansion (maximum volume error < 0.3 %).
           A1 = 1.0 + A3 - A3*A3
-*       Second-order cube root expansion (maximum volume error < 0.3 %).
-          IF (RS(I).GT.5.0*RSCALE) A1 = SQRT(A1)
 *       Prevent reduction of small NNB if predicted value exceeds ZNBMIN.
           IF (NNB.LT.ZNBMIN.AND.NBP.GT.ZNBMIN) THEN
               IF (A1.LT.1.0) A1 = 1.05
@@ -285,12 +284,18 @@
           IF (ABS(A1 - 1.0D0).GT.0.003) THEN
               RS(I) = A1*RS(I)
           END IF
+*       Employ extra reduction for inward motion and large membership.
+          IF (RS(I).GT.RC.AND.NNB.GT.ZNBMAX) THEN
+              IF (RIDOT.LT.0.0) THEN
+                  DRS = (FLOAT(NNB) - ZNBMAX)/(3.0*NNB)
+                  RS(I) = RS(I)*(1.0 - DRS)
+              END IF
+          END IF
       END IF
 *
 *       Calculate the radial velocity with respect to at most 3 neighbours.
       IF (NNB.LE.3.AND.RI2.LT.9.0*RH2) THEN
           A1 = 2.0*RS(I)
-*
           DO 45 L = 1,NNB
               J = ILIST(L+1)
               RIJ = SQRT((XI(1) - X(1,J))**2 + (XI(2) - X(2,J))**2 +
@@ -307,7 +312,7 @@
       END IF
 *
 *       Check minimum neighbour sphere since last output (skip NNB = 0).
-      IF (LIST(1,I).GT.0) RSMIN = MIN(RSMIN,RS(I))
+      RSMIN = MIN(RSMIN,RS(I))
 *
 *       Check optional procedures for adding neighbours.
       IF ((KZ(37).EQ.1.AND.LISTV(1).GT.0).OR.KZ(37).GT.1) THEN
@@ -353,7 +358,8 @@
    55 CONTINUE
 *
 *       Skip neighbour list comparison without derivative corrections.
-      IF (KZ(38).EQ.0.OR.(KZ(38).EQ.2.AND.DF2.LT.0.0004*FR2)) GO TO 70
+      IF (KZ(38).EQ.0.OR.(KZ(38).EQ.2.AND.DF2.LT.0.0001*FR2)) GO TO 70
+*       Note standard case #38 = 1 and efficiency scheme #38 = 3.
       JMIN = 0
       L = 2
       LG = 2
@@ -364,20 +370,32 @@
 *       Compare old and new list members in locations L & LG.
    56 IF (LIST(L,I).EQ.ILIST(LG)) GO TO 58
 *
-*       Now check whether inequality means gain or loss.
+*       Check whether inequality means gain or loss.
       IF (LIST(L,I).GE.ILIST(LG)) THEN
           NBGAIN = NBGAIN + 1
           JLIST(NNB0+NBGAIN) = ILIST(LG)
-*       Number of neighbour losses can at most be NNB0.
+*       Note number of neighbour losses can at most be NNB0.
           L = L - 1
-*       The same location will be searched again after increasing L below.
+*       Search the same location again after increasing L below.
       ELSE
-          NBLOSS = NBLOSS + 1
           J = LIST(L,I)
-          JLIST(NBLOSS) = J
-*       Check SMIN step indicator (rare case permits fast skip below).
-          IF (STEP(J).LT.SMIN) JMIN = J
           LG = LG - 1
+*       Include new optional scheme for corrections of only extreme cases.
+          IF (KZ(38).EQ.3) THEN
+              RD = (XI(1) - X(1,J))*(XIDOT(1) - XDOT(1,J)) +
+     &             (XI(2) - X(2,J))*(XIDOT(2) - XDOT(2,J)) +
+     &             (XI(3) - X(3,J))*(XIDOT(3) - XDOT(2,J))
+              IF (RD*DTR.GT.ETAR*RS(I)**2) THEN
+                  NBLOSS = NBLOSS + 1
+                  JLIST(NBLOSS) = J
+                  IF (STEP(J).LT.SMIN) JMIN = J
+               END IF
+          ELSE
+              NBLOSS = NBLOSS + 1
+              JLIST(NBLOSS) = J
+*       Check SMIN step indicator (rare case permits fast skip below).
+              IF (STEP(J).LT.SMIN) JMIN = J
+          END IF
       END IF
 *
 *       See whether the last location has been checked.
@@ -467,10 +485,16 @@
       T0R(I) = TIME
 *     FX = FI(1,I)
 *
-*       Suppress the corrector for large time-step ratios (experimental).
-      IF (STEP(I).LT.5.0D0*DTMIN.AND.DTR.GT.50.0*STEP(I)) THEN
-          DTR13 = 0.0
-          DTSQ12 = 0.0
+*       Suppress corrector for DTR/STEP > 100 and large derivative change.
+      IF (DTR.GT.100.0*STEP(I)) THEN
+          DFD2 = 0.0
+          DO 71 K = 1,3
+              DFD2 = DFD2 + (FIDOT(K,I) - FD(K))**2
+   71     CONTINUE
+          IF (DFD2.GT.1.0D+06*FDR2) THEN
+              DTR13 = 0.0
+              DTSQ12 = 0.0
+          END IF
       END IF
 *
 *       Obtain relative force error after no neighbour change (suppressed).
@@ -525,7 +549,11 @@
       IF (KZ(38).GT.0) THEN
           IF (KZ(38).EQ.1) THEN
               CALL FPCORR(I,NBLOSS,NBGAIN,XI,XIDOT)
-          ELSE IF (KZ(38).EQ.2.AND.DF2.GT.0.0025*FR2) THEN
+          ELSE IF (KZ(38).EQ.2.AND.DF2.GT.0.0004*FR2) THEN
+              CALL FPCORR(I,NBLOSS,NBGAIN,XI,XIDOT)
+          ELSE IF (NBLOSS.GT.0) THEN
+*       Ignore corrections for gains when treating the most critical losses.
+              NBGAIN = 0
               CALL FPCORR(I,NBLOSS,NBGAIN,XI,XIDOT)
           END IF
       END IF
@@ -542,14 +570,7 @@
 *
 *       Obtain new regular integration step using composite expression.
 *       STEPR = (ETAR*(F*F2DOT + FDOT**2)/(FDOT*F3DOT + F2DOT**2))**0.5.
-*
-*       Determine new regular step (standard or small regular force change).
-      IF (DF2.GT.1.0D-10*FI2) THEN
-          TTMP = TSTEP(FREG,FDR,D2R(1,I),D3R(1,I),ETAR)
-      ELSE
-*       Switch to simple criterion on regular force change below 1D-06*FIRR.
-          TTMP = ETAR*SQRT(FR2/FDR2)
-      END IF
+      TTMP = TSTEP(FREG,FDR,D2R(1,I),D3R(1,I),ETAR)
 *
 *       Impose a smooth step reduction inside compact core.
       IF (NC.LT.50.AND.RI2.LT.RC2) THEN
@@ -592,10 +613,16 @@
 *
 *       Include bug trap for irregular force difference with no NNB change.
 *     IF (NBLOSS+NBGAIN.EQ.0) THEN
-*     ERR = ABS(FIRR(1)-FX)
-*     IF (ERR.GT.1.0D-07) WRITE (6,560) NAME(I),NNB,ERR,FIRR(1),
-*    &                    STEP(I),TTMP
-* 560 FORMAT (' BUG TRAP    NAM NB DFX FX SI SR ',I6,I5,1P,4E10.2)
+*         ERR = ABS(FIRR(1)-FX)
+*         IF (ERR.GT.1.0D-07) WRITE (6,560) NAME(I),NNB,ERR,FIRR(1),
+*    &                        STEP(I),TTMP
+* 560     FORMAT (' BUG TRAP    NAM NB DFX FX SI SR ',I6,I5,1P,4E10.2)
+*     END IF
+*
+*     IF (DT0.LT.0.05*STEPR(I)) THEN
+*     WRITE (6,120)  NAME(I),NBGAIN,NBLOSS,NNB,TIME,STEPR(I),DT0
+* 120 FORMAT (' SHRINK!    NBG NBL NB T SR DT0  ',
+*    &                     4I6,F8.3,1P,6E10.2)
 *     END IF
 *
 *       Set new regular step and reduce irregular step if STEPR < STEP.
@@ -611,3 +638,4 @@
       RETURN
 *
       END
+
