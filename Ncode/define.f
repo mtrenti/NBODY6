@@ -13,7 +13,7 @@
 * NBODY6:
 *
 *       KSTART  Control index (1: new run; >1: restart; 3, 4, 5: new params).
-*       TCOMP   Maximum computing time in minutes (saved in CPU).
+*       TCOMP   Maximum CPU time in minutes (saved in CPU).
 ***
 * INPUT:
 *
@@ -26,7 +26,7 @@
 *
 *       ETAI    Time-step parameter for irregular force polynomial.
 *       ETAR    Time-step parameter for regular force polynomial.
-*       RS0     Initial radius of neighbour sphere.
+*       RS0     Initial radius of neighbour sphere (N-body units).
 *       DTADJ   Time interval for parameter adjustment (N-body units).
 *       DELTAT  Output time interval (N-body units).
 *       TCRIT   Termination time (N-body units).
@@ -60,26 +60,31 @@
 *       EPOCH0  Evolutionary epoch (in 10**6 yrs; NB! < 0 for PM evolution).
 *       DTPLOT  Plotting interval for HRDIAG (N-body units; >= DELTAT).
 ***
-* SETUP: if(kz(5).eq.2)
+* SETUP: if (kz(5).eq.2)
 *
 *       APO     Separation of two Plummer models (SEMI = APO/(1 + ECC).
 *       ECC     Eccentricity of two-body orbit (ECC < 0.999).
 *       N2      Membership of second Plummer model (N2 <= N).
 *       SCALE   Second scale factor (>= 0.2 for limiting minimum size).
 *
-*        if(kz(5).eq.3)
+*        if (kz(5).eq.3)
 *
 *       APO     Separation between the perturber and Sun.
 *       ECC     Eccentricity of orbit (=1 for parabolic encounter).
 *       DMIN    Minimum distance of approach (pericentre).
 *       SCALE   Perturber mass scale factor (=1 for Msun).
 *
-*        if(kz(5).eq.4)
+*        if (kz(5).eq.4)
 *
 *       SEMI    Semi-major axis (slightly modified; ignore if ECC > 1).
 *       ECC     Eccentricity (ECC > 1: NAME = 1 & 2 free-floating).
 *       M1      Mass of first member (in units of mean mass).
 *       M2      Mass of second member (rescaled total mass = 1).
+*
+*        if (kz(5).ge.6) & (kz(24).lt.0)
+*
+*       ZMH     Mass of single BH (in N-body units).
+*       RCUT    Radial cutoff in Zhao cusp distribution (MNRAS, 278, 488).
 ***
 * SCALE:
 *
@@ -94,6 +99,7 @@
 *       RG0     Central distance (in kpc).
 *
 *         if (kz(14).eq.3)
+*
 *       GMG     Point-mass galaxy (solar masses).
 *       DISK    Mass of Miyamoto disk (solar masses).
 *       A       Softening length in Miyamoto potential (in kpc).
@@ -104,6 +110,7 @@
 *       VG      Initial cluster velocity vector (km/sec).
 *
 *         if (kz(14).eq.3.or.kz(14).eq.4)
+*
 *       MP      Total mass of Plummer sphere (in scaled units).
 *       AP      Plummer scale factor (N-body units; square saved in AP2).
 *       MPDOT   Decay time for gas expulsion (MP = MP0/(1 + MPDOT*(T-TD)).
@@ -155,17 +162,19 @@
 *
 *       ---------------------------------------------------------------------
 *       1  COMMON save unit 1 (=1: 'touch STOP'; =2: every 100*NMAX steps).
-*       2  COMMON save unit 2 at output (=1); restart if DE/E > 5*QE (=2).
+*       2  COMMON save unit 2 (=1: at output; =2: restart if DE/E > 5*QE).
 *       3  Basic data unit 3 at output time (unformatted, frequency NFIX;
-*             =1/2: standard and/or tail; =3: tail only; >3: cluster + tail).
+*             =1/2: standard /and tail; =3: tail only; >3: cluster + tail).
 *       4  Binary diagnostics on unit 4 (# threshold levels = KZ(4) < 10).
 *                                       (currently suppressed in ksint.f.)
-*       5  Initial conditions (#22 =0; =0: uniform & isotropic sphere;
-*                =1: Plummer; =2: two Plummer models in orbit, extra input.
-*                =3: massive perturber and planetesimal disk, extra input.
-*                =4: massive initial binary, extra input; output on unit 35).
+*       5  Initial conditions (#22 =0; =0: uniform & isotropic sphere);
+*                =1: Plummer; =2: two Plummer models in orbit, extra input;
+*                =3: massive perturber and planetesimal disk, extra input;
+*                =4: massive initial binary, extra input: A, E, M1, M2;
+*                =5: Jaffe model;
+*               >=6: Zhao BH cusp model, extra input if #24 < 0: ZMH, RCUT.
 *       6  Significant & regularized binaries at main output (=1, 2, 3 & 4).
-*       7  Lagrangian radii (>0: RSCALE; =2, 3, 4: output units 6, 7, 12;
+*       7  Lagrangian radii (>0: RSCALE; =2, 3, 4: output units 6, 7, 12);
 *                >=2: Lagrangian radii for two mass groups on unit 31 & 32;
 *                >=2: harmonic radii for three mass groups on unit 6;
 *                 =5: density, rms velocity & mean mass on unit 26, 27 & 36;
@@ -173,36 +182,39 @@
 *       8  Primordial binaries (=1 & >=3; >0: BINOUT; >2: BINDAT; >3: HIDAT;
 *                               =4: Kroupa 1995 period distribution).
 *       9  Individual bodies on unit 6 at main output (MIN(5**KZ9,NTOT)).
-*      10  Diagnostic KS output (>0: begin; >1: end; >=3: each step).
-*      11  (reserved for NBODY7).
+*      10  Diagnostic KS output (>0: begin KS; >1: end; >=3: each step).
+*      11  (reserved for post-Newtonian code NBODY7).
 *      12  HR diagnostics of evolving stars (interval DTPLOT).
 *      13  Interstellar clouds (=1: constant velocity; >1: Gaussian).
 *      14  External force (=1: standard tidal field; =2: point-mass galaxy;
-*              =3: point-mass + disk + halo + Plummer; =4: Plummer sphere).
+*               =3: point-mass + disk + halo + Plummer; =4: Plummer model).
 *      15  Triple, quad, chain (#30 > 0) or merger search (>1: full output).
-*      16  Updating of regularization parameters (>0: RMIN, DTMIN & ECLOSE.
-*                  >1: RMIN expression based on core radius (experimental).
+*      16  Updating of regularization parameters (>0: RMIN, DTMIN & ECLOSE);
+*                  >1: RMIN expression based on core radius (experimental);
 *                  >2: modify RMIN for GPERT > 0.05 or < 0.002 in chain.
 *      17  Modification of ETAI, ETAR (>=1) and ETAU (>1) by tolerance QE.
 *      18  Hierarchical systems (=1: diagnostics; =2: primordial; =3: both).
 *      19  Mass loss (=1: old supernova scheme; =3: Eggleton, Tout & Hurley).
 *      20  Initial mass function (=0: Salpeter type using ALPHAS; =1: Scalo;
-*               =2, 4, 6: Kroupa; =3,5: Eggleton; > 1: primordial binaries).
+*              =2, 4, 6: Kroupa; =3, 5: Eggleton; > 1: primordial binaries).
 *      21  Extra output (>0: MODEL #, TCOMP, DMIN, AMIN; >1: NESC by JACOBI).
-*      22  Initial m, r, v on #10 (=1: output; >=2: input; >2: no scaling;
-*             =4: primordial binaries & singles on fort.10, standard scaling;
-*                          =-1: astrophysical input (Msun, km/s, pc) on #10).
-*      23  Escaper removal (>1: diagnostics in file ESC; =2: angles unit #6;
-*                           >=3: initialization & integration of tidal tail).
-*      24  Initial conditions for subsystem (M,X,V routine SCALE; KZ(24)= #).
+*      22  Initial m, r, v on #10 (=1: output; >=2: input; >2: no scaling);
+*              =3: input of stellar parameters on unit 12 (routine INSTAR);
+*              =4: input from mcluster.c code on fort.10 (also NBIN0 > 0);
+*              =-1: astrophysical input (M_sun, km/s, pc) on unit #10.
+*      23  Escaper removal (>1: diagnostics in file ESC with V_inf in km/s);
+*                           >=3: initialization & integration of tidal tail.
+*      24  Initial conditions for subsystem (M,X,V routine SCALE; KZ(24)= #);
+*                           <0: ZMH & RCUT (N-body units) Zhao model (#5>=6).
 *      25  Partial reflection of KS binary orbit (GAMMA < GMIN; suppressed).
 *      26  Slow-down of two-body motion (>=1: KS; >=2: chain; =3: rectify).
-*      27  Tidal effects (=1: sequential; =2: chaos; =3: GR energy loss;
-*                         =-1: collision detector, no coalescence, #13 < 0).
-*      28  GR radiation for NS & BH binaries (with #19 = 3; choice of #27).
+*      27  Tidal effects (=1: sequential; =2: chaos; =3: GR energy loss);
+*                         =-1: collision detector, no coalescence, #13 < 0.
+*      28  GR radiation for NS & BH binaries (with #19 = 3; choice of #27);
+*                         =3: and #5 >= 6: input of ZMH = 1/SQRT(2*N).
 *      29  Boundary reflection for hot system (suppressed).
-*      30  Multiple regularization (=1: all; >1: BEGIN/END; >2: each step;
-*                                =-1: CHAIN only; =-2: TRIPLE & QUAD only). 
+*      30  Multiple regularization (=1: all; >1: BEGIN/END; >2: each step);
+*                                =-1: CHAIN only; =-2: TRIPLE & QUAD only. 
 *      31  Centre of mass correction after energy check.
 *      32  Increase of output intervals (based on single particle energy).
 *      33  Histograms at main output (>=1: STEP; =2: STEPR, NBHIST & BINARY).
@@ -212,10 +224,20 @@
 *      37  Neighbour additions in CHECKL (>0: high-velocity; >1: all types).
 *      38  Force polynomial corrections (=0: I > N; >0: single particles).
 *      39  No unique density centre (skips velocity modification of RS(I)).
-*      40  Neighbour number control (=1: increase if <NNB>  <  NNBMAX/2;
-*                     >=2: fine-tuning at NNBMAX/5; =3: reduction of NNBMAX).
+*      40  Neighbour number control (=1: increase if <NNB>  <  NNBMAX/2);
+*                     >=2: fine-tuning at NNBMAX/5; =3: reduction of NNBMAX.
+*      41-50  Currently free.
 *       ---------------------------------------------------------------------
 *
+* NBODY6: Restart
+*
+*       KSTART TCOMP (KSTART = 2, 3, 4)
+*
+*       DTADJ DELTAT TADJ TNEXT TCRIT QE J KZ(J) (if > 0 & KSTART = 3 or 5).
+*       
+*       ETAI ETAR ETAU DTMIN RMIN NCRIT (if > 0 & KSTART = 4 or 5).
+*
+*       ---------------------------------------------------------------------
 *
 *       Output counters
 *       ***************
@@ -230,7 +252,6 @@
 *       NBFULL  Too many neighbours with standard criterion.
 *       NBVOID  No neighbours inside 1.26 times the basic sphere radius.
 *       NICONV  Irregular step reduction (force convergence test).
-*       NRCONV  Regular step reduction (Hermite) or increase (block-steps).
 *       NBSMIN  Retained neighbours inside 2*RS (STEP < SMIN).
 *       NLSMIN  Small step neighbours selected from other neighbour lists.
 *       NBDIS   Second component of recent KS pair added as neighbour (#18).
@@ -306,3 +327,5 @@
       RETURN
 *
       END
+
+

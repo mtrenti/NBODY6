@@ -45,14 +45,14 @@
               ZMASS = ZMASS + BODY(I)
     5     CONTINUE
 *       Include possibility of a new IMF via option #20.
-          IF (KZ(22).GT.2) GO TO 40
+          IF (KZ(22).GT.2.OR.KZ(22).EQ.-1) GO TO 50
       END IF
 *
 *       Include optional initial conditions on #10 in astrophysical units.
-      IF (KZ(22).EQ.-1) THEN
-          CALL SETUP2
-          GO TO 30
-      END IF
+*     IF (KZ(22).EQ.-1) THEN
+*         CALL SETUP2
+*         GO TO 30
+*     END IF
 *
 *       Include the case of equal masses (ALPHAS = 1 or BODY1 = BODYN).
       IF (ALPHAS.EQ.1.0.OR.BODY1.EQ.BODYN) THEN
@@ -103,6 +103,7 @@
           CALL SETUP
       END IF
 *
-      RETURN
+   50 RETURN
 *
       END
+

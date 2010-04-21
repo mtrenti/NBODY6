@@ -14,7 +14,7 @@
 *       Read & print the main input parameters.
       READ (5,*)  N, NFIX, NCRIT, NRAND, NNBMAX, NRUN
       READ (5,*)  ETAI, ETAR, RS0, DTADJ, DELTAT, TCRIT, QE, RBAR, ZMBAR
-      READ (5,*)  (KZ(J),J=1,40)
+      READ (5,*)  (KZ(J),J=1,50)
       READ (5,*)  DTMIN, RMIN, ETAU, ECLOSE, GMIN, GMAX
 *
       WRITE (6,10)
@@ -29,10 +29,10 @@
    20 FORMAT (/,9X,1P,10E10.1)
       WRITE (6,22)
    22 FORMAT (//,12X,'OPTIONS')
-      WRITE (6,24)  (J,J=1,40)
-   24 FORMAT (/,9X,40I3)
-      WRITE (6,26)  (KZ(J),J=1,40)
-   26 FORMAT (/,9X,40I3)
+      WRITE (6,24)  (J,J=1,50)
+   24 FORMAT (/,9X,50I3)
+      WRITE (6,26)  (KZ(J),J=1,50)
+   26 FORMAT (/,9X,50I3)
       WRITE (6,28)
    28 FORMAT (//,12X,'DTMIN     RMIN      ETAU      ECLOSE    GMIN',
      &                                                     '      GMAX')
@@ -78,3 +78,5 @@
       RETURN
 *
       END
+
+
