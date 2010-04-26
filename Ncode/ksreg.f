@@ -125,7 +125,7 @@
 *
 *       Check replacing of single KS component by corresponding c.m.
       DO 30 I = IFIRST-2,NTOT-1
-   20     IF (LIST(2,I).LT.IFIRST) THEN
+   20     IF (LIST(1,I).GT.0.AND.LIST(2,I).LT.IFIRST) THEN
               J2 = LIST(2,I)
               J = KVEC(J2) + N
               NNB = LIST(1,I)
