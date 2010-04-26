@@ -23,10 +23,9 @@
               NNB = L
               JSAVE(L) = J
           ELSE
-*       Use c.m. approximation to avoid closer unperturbed massive binary.
-              RIJ2 = (X(1,I) - X(1,J))**2 + (X(2,I) - X(2,J))**2
-     &                                   +  (X(3,I) - X(3,J))**2
-              IF (CMSEP2*R(J-N)**2.LT.RIJ2) THEN
+*       Accept any unperturbed binary for fast force calculation.
+              J1 = 2*(J - N) - 1
+              IF (LIST(1,J1).EQ.0) THEN
                   NNB = NNB + 1
                   JSAVE(NNB) = J
               ELSE
@@ -46,10 +45,6 @@
           J = IPERT(LL)
           KDUM = 2*(J - N) - 1
           K = KDUM
-*       Adopt c.m. of unperturbed binary for consistency.
-          IF (LIST(1,KDUM).EQ.0) THEN
-              K = J
-          END IF
 *       Evaluate perturbation on first component due to body #K.
    20     dr2 = 0.0
           drdv = 0.0
