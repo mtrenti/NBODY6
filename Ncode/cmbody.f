@@ -363,7 +363,7 @@
       BODY(I2) = 0.0D0
       SPIN(I1) = (SPIN(I1) + SPIN(I2))*(1.0 - DM/ZM)
       T0(I2) = TADJ + DTADJ 
-*     STEP(I2) = 1.0D+06
+      IF (KZ(23).EQ.0.OR.RTIDE.GT.1000.0*RSCALE) T0(I2) = 1.0D+10
       DTMAX = DTK(1)
       CALL DTCHCK(TIME,DTMAX,DTK(40))
       STEP(I2) = DTMAX
