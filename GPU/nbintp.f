@@ -8,14 +8,14 @@
       COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
      &                LISTC(LMAX)
       REAL*8  XI(3),XIDOT(3),FIRR(3),FREG(3),FD(3),FDUM(3),DV(3)
+      REAL*8  FIRR2(3),FD2(3)
+      INTEGER ISAVE(KMAX)
 *
 *
-*       Copy scalars and obtain total force & first derivative.
+*       Copy scalars and obtain irregular force & first derivative.
       DO 5 K = 1,3
           XI(K) = X(K,I)
           XIDOT(K) = XDOT(K,I)
-          FIRR(K) = 0.0D0
-          FD(K) = 0.0D0
     5 CONTINUE
 *
 *       Assume small mass at centre for special case of no neighbours.
@@ -94,30 +94,25 @@
       IF (NNB2.EQ.NNB1) GO TO 60
 *
    40 NNB3 = NNB2 + 1
-*       Set index for distinguishing c.m. or resolved components.
-      KDUM = 0
+      NI = 1
 *
 *       Sum over regularized c.m. neighbours.
       DO 50 L = NNB3,NNB1
           J = LIST(L,I)
-          A1 = X(1,J) - XI(1)
-          A2 = X(2,J) - XI(2)
-          A3 = X(3,J) - XI(3)
-          RIJ2 = A1*A1 + A2*A2 + A3*A3
-*
           JP = J - N
           KDUM = 2*JP - 1
-          K = KDUM
           IF (LIST(1,KDUM).EQ.0) THEN
-              K = J
-              GO TO 48
+              NI = NI + 1
+              ISAVE(NI) = J
+              GO TO 50
           END IF
 *       Sum over individual components of pair #J.
+          K = KDUM
    45     A1 = X(1,K) - XI(1)
           A2 = X(2,K) - XI(2)
           A3 = X(3,K) - XI(3)
           RIJ2 = A1*A1 + A2*A2 + A3*A3
-   48     DV(1) = XDOT(1,K) - XIDOT(1)
+          DV(1) = XDOT(1,K) - XIDOT(1)
           DV(2) = XDOT(2,K) - XIDOT(2)
           DV(3) = XDOT(3,K) - XIDOT(3)
 *
@@ -138,6 +133,15 @@
           END IF
    50 CONTINUE
 *
+*       Include unperturbed KS contributions by fast procedure (as NBINT).
+      IF (NI.GT.1) THEN
+          CALL CNBINT(I,X,XDOT,BODY,NI,ISAVE(2),FIRR2,FD2)
+          DO 55 K = 1,3
+              FIRR(K) = FIRR(K) + FIRR2(K)
+              FD(K) = FD(K) + FD2(K)
+   55     CONTINUE
+      END IF
+*
 *       Include differential force treatment for regularized subsystem.
    60 IF (NCH.GT.0) THEN
 *       Distinguish between chain c.m. and any other particle.
@@ -150,7 +154,7 @@
                   J = LISTC(L)
                   IF (J.GT.I) GO TO 70
                   IF (J.EQ.I) THEN
-                      CALL FCHAIN(I,0,XI,XIDOT,FIRR,FD)
+                      CALL FCHAIN(I,1,XI,XIDOT,FIRR,FD)
                       GO TO 70
                   END IF
    65         CONTINUE
