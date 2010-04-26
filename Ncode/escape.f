@@ -51,6 +51,7 @@
           EI = 0.5*VI2 - POTI
           IF (KZ(14).EQ.4.OR.KZ(14).EQ.3) THEN
               EI = EI - MP/SQRT(RI2 + AP2)
+              IF (BODY(I).EQ.0.0D0) GO TO 30
           END IF
           IF ((KZ(14).GT.0.AND.KZ(14).NE.4).OR.EI.GT.0.0) GO TO 30
       END IF
@@ -142,8 +143,6 @@
           ZK = ZK + HT
           RTIDE = (ZMASS/TIDAL(1))**0.3333
       ELSE IF (KZ(14).EQ.4.OR.KZ(14).EQ.3) THEN
-*       Include optional Plummer sphere and update tidal radius.
-          POTI = POTI + MP/SQRT(RI2 + AP2)
           RTIDE = RTIDE0*ZMASS**0.3333
       END IF
       EI = ZK - BODY(I)*POTI
@@ -393,6 +392,12 @@
           NBESC = NBESC + 1
       ELSE
           NMESC = NMESC + 1
+      END IF
+*
+*       Include escaping chain c.m. (retained ghosts not harmful).
+      IF (NAMEI.EQ.0.OR.NAMEI.EQ.99999) THEN
+          WRITE (6,204)  NCH, EI
+  204     FORMAT (' CM CHAIN ESCAPE    NCH EI ',I4,1P,E10.2)
       END IF
 *
 *       Reduce particle number, pair index & single particle index. 
