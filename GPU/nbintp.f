@@ -62,6 +62,10 @@
    25 IF (LIST(NNB2,I).LE.N) GO TO 30
       NNB2 = NNB2 - 1
       IF (NNB2.GT.1) GO TO 25
+      DO 26 K = 1,3
+          FIRR(K) = 0.0
+          FD(K) = 0.0
+   26 CONTINUE
 *       Include special case of only c.m. neighbours.
       GO TO 40
 *
