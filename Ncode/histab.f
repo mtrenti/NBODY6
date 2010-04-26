@@ -83,10 +83,12 @@
               IPAIR = J - N
               I1 = 2*IPAIR - 1
               I2 = I1 + 1
-              J = I
+              JJ = I
+              I = J
           END IF
       ELSE
           YFAC = 1.0
+          JJ = J
       END IF
 *
 *       Resolve weakly perturbed binary (prevent X(K,I1) = X(K,I2)).
@@ -98,15 +100,15 @@
       DO 10 K = 1,3
           XX(K,1) = X(K,I1)
           XX(K,2) = X(K,I2)
-          XX(K,3) = X(K,J)
+          XX(K,3) = X(K,JJ)
           VV(K,1) = XDOT(K,I1)
           VV(K,2) = XDOT(K,I2)
-          VV(K,3) = XDOT(K,J)
+          VV(K,3) = XDOT(K,JJ)
   10  CONTINUE
       CALL INCLIN(XX,VV,X(1,I),XDOT(1,I),ANGLE)
 *
 *       Employ the improved stability criterion for doubtful cases.
-      RSTAB = stability(BODY(I1),BODY(I2),BODY(J),ECC,ECC1,ANGLE)*SEMI
+      RSTAB = stability(BODY(I1),BODY(I2),BODY(JJ),ECC,ECC1,ANGLE)*SEMI
 *       Note: the present stability routine includes inclination!
 *     RSTAB = YFAC*RSTAB
       PCRIT = RSTAB
