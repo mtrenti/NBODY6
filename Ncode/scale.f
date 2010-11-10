@@ -10,7 +10,7 @@
       real*8 mscale, lscale, vscale
 *
 *       Define physical constants (consistent with IAU & routine UNITS).
-      G = 6.6743-08
+      G = 6.6743D-08
       M_sun = 1.9884D+33
       R_sun = 6.955D+10
       pc = 3.0856776D+18
@@ -363,10 +363,10 @@
    85     CONTINUE
       END IF
 *
-*       Check for writing initial conditions (physical units) on unit #101.
+*       Check for writing initial conditions (physical units) on unit #99.
       IF (KZ(22).EQ.-1.OR.KZ(22).EQ.5) THEN
           DO 86 I = 1,N
-              write (101,84)  BODY(I)*mscale, (X(K,I)*lscale,K=1,3),
+              write (99,84)  BODY(I)*mscale, (X(K,I)*lscale,K=1,3),
      &                        (XDOT(K,I)*vscale,K=1,3)
    86     CONTINUE
       END IF
