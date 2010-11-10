@@ -11,7 +11,7 @@
       COMMON/IND6/  IND(6)
       COMMON/BSSAVE/  EP(4),DSC,FACM,TFAC,ITFAC,JC
       COMMON/SLOW0/  RANGE,ISLOW(10)
-      COMMON/COUNTS/  NCOUNT(70)
+      COMMON/COUNTS/  NCOUNT(168)
 *
 *
 *       Initialize COMMON indices & B-S data array.
