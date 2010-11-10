@@ -9,7 +9,7 @@
      &                LISTC(LMAX)
       REAL*8  XI(3),XIDOT(3),FIRR(3),FREG(3),FD(3),FDUM(3),DV(3)
       REAL*8  FIRR2(3),FD2(3)
-      INTEGER ISAVE(KMAX)
+      INTEGER ISAVE(LMAX)
       SAVE TCALL
       DATA TCALL /0.0D0/
 *
