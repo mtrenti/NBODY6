@@ -73,7 +73,6 @@ C Added 20.06.96 write statements: added 3.09.2002: write to feeding.dat.
         write(6,*)' FEEDING in binpop_pk.f'
         write(6,'(a,2F8.3)')' old masses [Msun]:', 
      +                        mass1*ZMBAR,mass2*ZMBAR 
-      qnew = qold
         mass1 = DMAX1(mass1,mass2)
         mass2 = qnew*mass1
         write(6,'(a,2F8.3)')' new masses [Msun]:', 
