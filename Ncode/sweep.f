@@ -53,6 +53,8 @@
       IF (AINV.GT.1.0/RCL.OR.EREL.GT.ECLOSE) THEN
           ICOMP = MIN(I,JMIN)
           JCOMP = MAX(I,JMIN)
+*       Skip possible case of chain c.m. forming binary.
+          IF (NAME(ICOMP).EQ.0.OR.NAME(JCOMP).EQ.0) GO TO 1
 *       Ensure most recent velocity used for new KS.
           DO 16 K = 1,3
               X0DOT(K,ICOMP) = XDOT(K,ICOMP)
@@ -82,3 +84,4 @@
    30 RETURN
 *
       END
+
