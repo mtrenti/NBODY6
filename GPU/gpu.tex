@@ -1,0 +1,128 @@
+\documentclass[12pt]{article}
+\begin{document}
+
+{\large
+{\centerline{Report on the use of GPU}}
+
+\medskip
+\centerline{Sverre Aarseth}
+\centerline{Institute of Astronomy, Cambridge}}
+
+\bigskip
+The gravitational $N$-body problem presents a formidable challenge for
+numerical analysts and astronomers.
+Its study has been pursued at the Institute over more than 40 years.
+This period has seen a tremendous growth in computing power as well as
+significant advances in solution methods.
+The direct astronomical application is to star clusters, ranging from
+small groups to globular clusters with more than a million members.
+The classical $N$-body problem is also of long-standing interest for
+mathematicians.
+
+Given Newton's equations of motion, orbital solutions for $N$ interacting
+mass-points can be obtained by numerical integration of $6N$ first-order
+differential equations.
+Although expensive, the direct approach is feasible for memberships up to
+say $N=104$ at most without the use of supercomputers.
+The addition of a GPU card to a standard PC at modest cost increases the
+effectiveness considerably and enables systems with $N=105$ stars to be
+studied over several Gyr.
+This allows realistic simulations of star clusters in which a range of
+astrophysical processes can be included at little extra cost.
+
+At the simplest level, the direct integration method consists mainly of
+evaluating $N2$ gravitational forces, followed by advancing $6N$ first-order
+equations by a small time interval.
+Further gains in efficiency may be achieved in several ways:
+(i) a Taylor series polynomial representing the force which is beneficial
+for predictions; (ii) individual time-steps consistent with relative
+convergence at different densities; (iii) special treatment of binaries
+and close encounters which are a troublesome feature of stellar systems;
+(iv) a neighbour scheme in which local forces are updated on shorter
+time-scales.
+Since obtaining the total force represents the main cost of such an
+approach for larger particle numbers the use of a GPU for this purpose can
+speed up the calculation significantly using parallel procedures.
+In the past, speed-ups were achieved using GRAPE special-purpose hardware
+together with the brute-force $N2$ method but the cost-effectiveness of the
+latest models is unfavourable when compared with new technology.
+
+With the new approach we retain the neighbour scheme and calculate the
+so-called regular force arising from the more distant particles in single 
+precision on the GPU.
+At the same time, a list is formed of all members inside a specified radius
+and used for the neighbour force calculation on the host.
+The latter is performed in C++ which speeds up the calculation when using
+SSE/OpenMP.
+However, the need for an adequate neighbour number ($\simeq N^{1/2}$)
+constitutes an important bottleneck.
+Already the $N2$ calculation of the total energy is performed on the GPU in
+the form of individual potential energies which are summed in an order $N$
+operation.
+In the near future we also plan to implement the neighbour force calculation
+on the GPU, possibly in combination with the frequent prediction of particle
+coordinates and velocities.
+The CUDA and C++ programming is performed by my collaborator, Dr Keigo
+Nitadori (Riken Institute, Japan) who has created an extensive library
+which also includes multiple GPU systems.
+The large Cambridge code NBODY6-GPU is freely available on the web and is
+currently used by some 10 researchers in many countries.
+It is almost unique in the sense that an alternative code only tends to be
+used by its originators.
+Although highly specialized, some of the techniques could well be of interest
+in other areas, in particular the scheme of splitting force contributions
+into a local and distant part, with the latter evaluated on a GPU.
+
+In the actual GPU implementation we also evaluate the first time derivative
+of the force (per unit mass) which is required to construct a fourth-order
+integration scheme.
+The evaluation of the regular force can be done in single precision and is
+therefore well suited to the Tesla C1060.
+However, for the C++ irregular (or neighbour) force procedures all
+coordinates and their differences are retained in double precision and the
+force contributions are accumulated in double precision.
+This pseudo double-precision algorithm is discussed by Nitadori (2009)
+and will be needed when calculating the neighbour force on the GPU.
+
+Our experience with the Tesla C1060 is illustrated by some timing tests.
+A considerable effort has gone into preparing fully optimized versions and
+hence the speed-up can be realized in actual simulations.
+Results are shown for particle numbers in the range $N\,=\,4\,000$ to
+$100\,000$ with the maximum value representing a practical limit in CPU
+time for large simulations on a single GPU system.
+Also shown are results for the standard NBODY6 using the same host (Intel Core
+i7 2.66 GHz, quad core) and the corresponding SSE/OpenMP code.
+The wall-clock time in seconds is given for an interval of 2 scaled time
+units, or nearly one typical cluster crossing time.
+The upper curve is from the standard code, followed by SSE/OpenMP and GPU.
+In the limit of large $N$-values the speed-up factor of the GPU is about 70
+with respect to the standard code and about 4 with respect to SSE.
+
+Recent results have been presented at the Workshop on Computational
+Gravitational Dynamics (Lorentz Center, Leiden).
+A paper based on work with the Tesla C1060 is in the final stages of
+preparation (Moeckel, 2010).
+We also plan to describe the complete software when our new ideas have
+been implemented.
+
+\bigskip
+\noindent
+References 
+
+\noindent
+S.J. Aarseth, Gravitational $N$-Body Simulations (CUP 2003)
+
+\noindent
+N. Moeckel, Collisional formation of very massive stars in dense clusters
+(in prep.)
+
+\noindent
+K. Nitadori, New approaches to high-performance $N$-body simulations, Ph.D.
+Thesis (Tokyo, 2009)
+
+\noindent
+http://www.ast.cam.ac.uk/research/nbody
+
+
+\end{document}
+
