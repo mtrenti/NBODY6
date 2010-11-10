@@ -197,6 +197,15 @@
       DTU = ETAU*W2
       DTU = MIN(1.2*DTAU(IPAIR),DTU)
 *
+*       Include convergence criterion DH = H'*DTU + H''*DTU**2/2 = 0.001*|H|.
+      IF (GI.GT.1.0D-04) THEN
+          DH = 1.0E-03*MAX(ABS(H(IPAIR)),ECLOSE)
+          XF = 2.0*DH/ABS(HDOT2(IPAIR))
+          YF = HDOT(IPAIR)/HDOT2(IPAIR)
+          DTU1 = SQRT(XF + YF**2) - ABS(YF)
+          DTU = MIN(DTU1,DTU)
+      END IF
+*
 *       Check pericentre step reduction for perturbed spiral.
       IF (KSTAR(I).EQ.-2.AND.TD2.LT.0.0) THEN
           SEMI = -0.5*BODY(I)/HI
@@ -334,9 +343,9 @@
                   END IF
                   IF (QPERI.LT.5.0*RX) THEN
                       WRITE (54,54)  TTOT, NAME(I1), NAME(I2), KS1,
-     &                               KS2, VINF, RCAP, RX*SU, QPERI*SU
+     &                               KS2, VINF, RCAP*SU, RX*SU, QPERI*SU
    54                 FORMAT (' CLOSE   T NAM K* VINF RCAP RX QP  ',
-     &                                  F7.1,2I6,2I4,2F6.2,2F6.1)
+     &                                  F7.1,2I6,2I4,F6.2,3F6.1)
                   END IF
                   IF (QPERI.LT.RCAP) THEN
                       J1 = I1
