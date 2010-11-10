@@ -102,28 +102,28 @@
       endif
       endif
 
-      IF ((KZ(7).EQ.2.OR.KZ(7).EQ.4).AND.TTOT.GE.TNEXT) THEN
+      IF ((KZ(7).EQ.2.OR.KZ(7).EQ.4).AND.TIME.GE.TNEXT) THEN
           IF (KZ(14).EQ.2) WRITE (6,*)  tphys,mrt,rt
       END IF
 *
-      IF (KZ(7).GE.3.AND.TTOT.GE.TNEXT) THEN
+      IF (KZ(7).GE.3.AND.TIME.GE.TNEXT) THEN
           IF (KZ(14).EQ.2) WRITE (14,35)  tphys, mrt, rt
    35     FORMAT (3X,'TIDAL RADIUS    TPHYS MRT RT ',F8.1,1P,2E10.2)
       END IF
 *
 *       Check output options (line printer or unit 7 or both).
-      IF (KZ(7).EQ.2.OR.KZ(7).EQ.4.AND.TTOT.GE.TNEXT) THEN
+      IF (KZ(7).EQ.2.OR.KZ(7).EQ.4.AND.TIME.GE.TNEXT) THEN
           WRITE (6,40)  (LOG10(RLAGR(K)),K=1,LX)
-   40     FORMAT (/,3X,'LAGR:  ',13F7.3)
+   40     FORMAT (/,' LAGR:  ',13F7.3)
       END IF
 *
-      IF (KZ(7).GE.3.AND.TTOT.GE.TNEXT) THEN
+      IF (KZ(7).GE.3.AND.TIME.GE.TNEXT) THEN
           WRITE (12,50)  TTOT, (LOG10(RLAGR(K)),K=1,LX)
    50     FORMAT ('  LAGR:  ',F7.1,13F7.3)
           CALL FLUSH(12)
       END IF
 *
-      IF (KZ(7).EQ.5.AND.TTOT.GE.TNEXT) THEN
+      IF (KZ(7).EQ.5.AND.TIME.GE.TNEXT) THEN
           WRITE (26,60)  TTOT, (DENS(K),K=1,LX)
    60     FORMAT ('  DENSITY (T =',F7.1,'): ',1P,13E10.2)
           WRITE (26,65)  (RM(K),K=1,LX)
@@ -136,7 +136,7 @@
    75     FORMAT ('  AVERAGE MASS (T =',F7.1,'): ',13F7.3)
           CALL FLUSH(36)
       END IF
-      IF (KZ(7).EQ.6.AND.TTOT.GE.TNEXT) THEN
+      IF (KZ(7).EQ.6.AND.TIME.GE.TNEXT) THEN
           WRITE (28,80)  TTOT, (AVM(K), RM(K),K=1,LX)
    80     FORMAT (' PAIRWISE <M> <RM> (T =',F7.1,'): ',
      &                                13(0P,F7.3,1P,E10.2))
@@ -146,3 +146,4 @@
       RETURN
 *
       END
+
